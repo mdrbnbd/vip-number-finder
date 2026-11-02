@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="bn" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ভিআইপি নাম্বার ফাইন্ডার — রবি ০১৮ · এয়ারটেল ০১৬</title>
+  <meta name="description" content="রবি (০১৮) ও এয়ারটেল (০১৬) এর খালি থাকা ভিআইপি নাম্বার এক ট্যাপে খুঁজুন — স্কোর, টিয়ার, পছন্দ, কপি ও অফিসিয়াল কেনার লিংক।" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="VIP নাম্বার" />
+  <meta property="og:title" content="ভিআইপি নাম্বার ফাইন্ডার" />
+  <meta property="og:description" content="রবি ও এয়ারটেলের খালি ভিআইপি নাম্বার খুঁজুন" />
+  <meta property="og:image" content="icons/icon-512.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="40" height="40" />
+      <div>
+        <h1>ভিআইপি নাম্বার ফাইন্ডার</h1>
+        <p>রবি ০১৮ · এয়ারটেল ০১৬ · শুধু খালি নাম্বার</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn hidden" id="installBtn" type="button" title="অ্যাপ ইনস্টল করুন">⬇️ অ্যাপ</button>
+      <button class="icon-btn" id="themeBtn" type="button" title="থিম বদলান" aria-label="থিম বদলান">🌙</button>
+    </div>
+  </header>
+
+  <!-- 1. Operator + series -->
+  <section class="card">
+    <div class="card-h"><h2>📡 অপারেটর ও সিরিজ</h2><span class="muted small" id="seriesSummary"></span></div>
+    <div class="op-row">
+      <label class="op robi"><input type="checkbox" id="opROBI" checked /><span><b>রবি</b> ০১৮</span></label>
+      <label class="op airtel"><input type="checkbox" id="opAIRTEL" checked /><span><b>এয়ারটেল</b> ০১৬</span></label>
+    </div>
+    <div class="seg" id="seriesMode" role="radiogroup">
+      <label><input type="radio" name="smode" value="smart" checked /><span>🧠 স্মার্ট (সক্রিয় সাব-সিরিজ)</span></label>
+      <label><input type="radio" name="smode" value="manual" /><span>✋ নিজে বাছাই</span></label>
+    </div>
+    <p class="hint" id="smartHint">অপারেটর এখন যে সাব-সিরিজগুলোতে নাম্বার ছাড়ছে (যেমন ০১৮২৫, ০১৬১২) — অ্যাপ নিজে শিখে সেগুলোতেই খোঁজে, তাই দ্রুত পাওয়া যায়।</p>
+    <div id="seriesPick" class="hidden">
+      <div class="series-group" data-brand="ROBI"><div class="sg-label">রবি ০১৮<i>X</i></div><div class="chips" id="seriesROBI"></div></div>
+      <div class="series-group" data-brand="AIRTEL"><div class="sg-label">এয়ারটেল ০১৬<i>X</i></div><div class="chips" id="seriesAIRTEL"></div></div>
+      <p class="hint">🟢 = সম্প্রতি খালি নাম্বার দেখা গেছে এমন সিরিজ</p>
+    </div>
+  </section>
+
+  <!-- 2. VIP presets -->
+  <section class="card">
+    <div class="card-h"><h2>✨ ভিআইপি প্যাটার্ন — এক ট্যাপে</h2></div>
+    <div class="presets" id="presets"></div>
+    <div id="presetOpts" class="preset-opts">
+      <div class="field hidden" id="digitField">
+        <label>কোন সংখ্যা?</label>
+        <div class="chips digits" id="digitChips"></div>
+      </div>
+      <div class="field hidden" id="bdayField">
+        <label for="bdayInput">জন্মতারিখ / বিশেষ তারিখ</label>
+        <input type="date" id="bdayInput" />
+        <div class="seg small" id="bdayFmt">
+          <label><input type="radio" name="bfmt" value="any" checked /><span>সব ধরন</span></label>
+          <label><input type="radio" name="bfmt" value="ddmmyy" /><span>DDMMYY</span></label>
+          <label><input type="radio" name="bfmt" value="ddmm" /><span>DDMM</span></label>
+          <label><input type="radio" name="bfmt" value="yyyy" /><span>YYYY</span></label>
+          <label><input type="radio" name="bfmt" value="ddmmyyyy" /><span>DDMMYYYY</span></label>
+        </div>
+        <p class="hint" id="bdayPreview"></p>
+      </div>
+      <div class="field hidden" id="customField">
+        <label for="patternInput">কাস্টম প্যাটার্ন বিল্ডার</label>
+        <input id="patternInput" autocomplete="off" spellcheck="false" placeholder="যেমন: 01*-***7777 বা ****ABAB" />
+        <div class="pattern-preview" id="patternPreview"></div>
+        <p class="hint">
+          <b>*</b> = যেকোনো সংখ্যা · <b>০-৯</b> = নির্দিষ্ট সংখ্যা · <b>A, B, C…</b> = একই অক্ষর মানে একই সংখ্যা, ভিন্ন অক্ষর মানে ভিন্ন সংখ্যা।<br />
+          উদাহরণ: <code data-p="****7777">****7777</code> <code data-p="ABCDDCBA">ABCDDCBA</code> <code data-p="**ABABAB">**ABABAB</code> <code data-p="***AAA00">***AAA00</code> <code data-p="01825*****">01825*****</code>
+        </p>
+      </div>
+    </div>
+
+    <details class="adv" id="advBox">
+      <summary>⚙️ উন্নত ফিল্টার</summary>
+      <div class="field">
+        <label for="mustInput">অবশ্যই থাকবে (শেষ ৮ অংকে)</label>
+        <input id="mustInput" inputmode="numeric" maxlength="6" placeholder="যেমন: ৭৮৬ বা ১৯" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>এই সংখ্যাগুলো থাকবে না <span class="muted small">(সিরিজের পরের ৭ অংকে)</span></label>
+        <div class="chips digits" id="avoidChips"></div>
+      </div>
+      <div class="field">
+        <label for="budgetSel">কতগুলো নাম্বার যাচাই করবে</label>
+        <select id="budgetSel">
+          <option value="90">৯০ (দ্রুত, ~১ মিনিট)</option>
+          <option value="300" selected>৩০০ (~৪ মিনিট)</option>
+          <option value="800">৮০০ (~১০ মিনিট)</option>
+          <option value="2000">২০০০ (দীর্ঘ)</option>
+        </select>
+      </div>
+      <label class="switch"><input type="checkbox" id="bonusChk" checked /><span>অপারেটরের সাজেশন থেকেও সুন্দর (সিলভার+) নাম্বার দেখাও</span></label>
+    </details>
+
+    <div class="actions">
+      <button class="btn primary" id="startBtn" type="button">🔍 খুঁজুন</button>
+      <button class="btn stop hidden" id="stopBtn" type="button">⏹ থামান</button>
+    </div>
+
+    <div class="progress" id="progressBox">
+      <div class="bar"><i id="bar"></i></div>
+      <div class="stats">
+        <div><b id="sChecked">০</b><span>যাচাই</span></div>
+        <div class="ok"><b id="sFound">০</b><span>খালি ভিআইপি</span></div>
+        <div><b id="sRate">–</b><span>প্রতি সেকেন্ড</span></div>
+        <div><b id="sStatus">প্রস্তুত</b><span>অবস্থা</span></div>
+      </div>
+      <div class="series-live" id="seriesLive"></div>
+      <p class="hint small">প্রতি সিরিজে 🔍 = যাচাই, ✅ = পাওয়া</p>
+    </div>
+  </section>
+
+  <!-- 3. Results -->
+  <section class="card">
+    <div class="card-h">
+      <div class="tabs">
+        <button type="button" class="active" data-tab="found">📋 ফলাফল <span class="count" id="cFound">০</span></button>
+        <button type="button" data-tab="favs">⭐ পছন্দ <span class="count" id="cFavs">০</span></button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="chips tierf" id="tierFilter">
+        <button type="button" data-tier="all" class="on">সব</button>
+        <button type="button" data-tier="diamond">💎 ডায়মন্ড</button>
+        <button type="button" data-tier="gold">🥇 গোল্ড</button>
+        <button type="button" data-tier="silver">🥈 সিলভার</button>
+      </div>
+      <div class="tool-row">
+        <select id="opFilter" aria-label="অপারেটর ফিল্টার">
+          <option value="all">সব অপারেটর</option>
+          <option value="ROBI">শুধু রবি</option>
+          <option value="AIRTEL">শুধু এয়ারটেল</option>
+        </select>
+        <select id="sortSel" aria-label="সাজান">
+          <option value="score">সেরা আগে</option>
+          <option value="new">নতুন আগে</option>
+          <option value="num">নাম্বার অনুযায়ী</option>
+        </select>
+        <input id="searchBox" placeholder="নাম্বারে খুঁজুন…" inputmode="numeric" autocomplete="off" />
+      </div>
+    </div>
+    <div id="list" class="list"></div>
+    <div class="export">
+      <button class="btn ghost" id="copyAllBtn" type="button">📋 সব কপি</button>
+      <button class="btn ghost" id="shareAllBtn" type="button">📤 শেয়ার</button>
+      <button class="btn ghost" id="csvBtn" type="button">⬇️ CSV</button>
+      <button class="btn ghost" id="clearBtn" type="button">🗑 মুছুন</button>
+    </div>
+  </section>
+
+  <section class="card how">
+    <h2>❓ কীভাবে কিনবেন</h2>
+    <ol>
+      <li>পছন্দের নাম্বারের পাশে <b>কিনুন</b> চাপুন — নাম্বারটি কপি হবে আর অপারেটরের অফিসিয়াল পেজ খুলবে।</li>
+      <li>অফিসিয়াল পেজে নাম্বার পেস্ট করে বাকি ধাপ সেখানেই সম্পন্ন করুন।</li>
+      <li>অনেক সময় নাম্বার দ্রুত বিক্রি হয়ে যায় — <b>আবার যাচাই</b> চেপে নিশ্চিত হয়ে নিন।</li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>⚠️ নাম্বারগুলো রবি/এয়ারটেলের পাবলিক “নাম্বার খালি আছে কি না” যাচাই সার্ভিস থেকে সরাসরি দেখানো হয়। কেনাকাটা শুধু অপারেটরের অফিসিয়াল সাইটে হয় — এই সাইট কোনো টাকা বা ব্যক্তিগত তথ্য নেয় না। দেখানো সময়ের পরে নাম্বার বিক্রি হয়ে যেতে পারে।</p>
+    <p class="muted small">রবি আজিয়াটা / এয়ারটেল বাংলাদেশের সাথে কোনো সম্পর্ক নেই · Made by Robin</p>
+  </footer>
+</div>
+
+<div class="sheet hidden" id="whySheet" role="dialog" aria-modal="true">
+  <div class="sheet-body">
+    <div class="sheet-h"><b id="whyTitle"></b><button class="icon-btn" id="whyClose" type="button" aria-label="বন্ধ">✕</button></div>
+    <div id="whyContent"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="vip.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

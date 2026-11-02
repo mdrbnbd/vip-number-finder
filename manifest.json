@@ -1,0 +1,20 @@
+{
+  "name": "ভিআইপি নাম্বার ফাইন্ডার — রবি ও এয়ারটেল",
+  "short_name": "VIP নাম্বার",
+  "description": "রবি ০১৮ ও এয়ারটেল ০১৬ এর খালি থাকা ভিআইপি নাম্বার খুঁজুন",
+  "lang": "bn",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f1a",
+  "theme_color": "#0b0f1a",
+  "categories": ["utilities", "shopping"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
