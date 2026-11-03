@@ -16,7 +16,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body class="v6">
 <div class="app">
@@ -57,17 +57,37 @@
     </div>
 
     <div id="scanPane">
+    <!-- ===== v9 TIER SEARCH ===== -->
+    <section class="tierx" id="tierBox" aria-labelledby="txTitle">
+      <div class="tx-head">
+        <h3 id="txTitle"></h3>
+        <p class="hint" id="txHint"></p>
+      </div>
+      <div class="tx-tiers" id="txTiers" role="radiogroup"></div>
+      <div class="tx-row">
+        <label class="tx-code"><span id="txCodeL"></span><input id="txCode" inputmode="numeric" maxlength="9" placeholder="018 / 01815 / 016" autocomplete="off" /></label>
+        <label class="tx-want"><span id="txWantL"></span><select id="txWant"><option>10</option><option selected>20</option><option>50</option></select></label>
+      </div>
+      <p class="ex-info" id="txInfo" aria-live="polite"></p>
+      <div class="ex-acts">
+        <button class="btn ghost hidden" id="txStop" type="button"></button>
+      </div>
+      <div class="tx-bar hidden" id="txBarBox"><div id="txBar"></div></div>
+      <p class="hint" id="txProg" aria-live="polite"></p>
+      <details class="tx-rules" id="txRulesBox"><summary id="txRulesS"></summary><div id="txRules"></div></details>
+    </section>
+
     <section class="exact" id="exactBox">
       <h3 id="exTitle"></h3>
       <div class="ex-modes" id="exModes" role="tablist"><button type="button" data-m="C"></button><button type="button" data-m="D"></button><button type="button" data-m="T"></button></div>
       <p class="hint" id="exHint"></p>
       <div class="ex2">
-        <label><span id="exStartL"></span><input id="exStart" inputmode="numeric" maxlength="11" placeholder="01766 / 018XX" autocomplete="off" /></label>
+        <label><span id="exStartL"></span><input id="exStart" inputmode="numeric" maxlength="11" placeholder="018 / 01815" autocomplete="off" /></label>
         <label id="exEndWrap"><span id="exEndL"></span><input id="exEnd" inputmode="numeric" maxlength="8" placeholder="5555" autocomplete="off" /></label>
       </div>
       <details id="exMoreBox"><summary id="exMore"></summary>
         <label class="hidden"><span id="exMidL"></span><input id="exMid" inputmode="numeric" maxlength="8" autocomplete="off" /></label>
-        <label><span id="exPatL"></span><input id="exPat" maxlength="14" placeholder="0176X-XX5555" autocomplete="off" /></label>
+        <label><span id="exPatL"></span><input id="exPat" maxlength="14" placeholder="0181X-XX5555" autocomplete="off" /></label>
       </details>
       <div class="ex-tpl" id="exTpl" aria-live="polite"></div>
       <p class="ex-info" id="exInfo" aria-live="polite"></p>
@@ -156,6 +176,7 @@
       <button type="button" data-tier="3"><span data-t="f3">রেগুলার ৩★</span> <i id="c3">0</i></button>
     </div>
     <div class="grp-tabs" id="grpTabs" role="tablist"></div>
+    <div class="sort9"><label for="sortSel9" id="sortLbl9">সাজান</label><select id="sortSel9"></select></div>
     <div id="list" class="list"></div>
     <div class="export">
       <button class="btn export-txt" id="txtBtn" type="button" data-t="exportTxt">📄 টেক্সট লিস্ট</button>
@@ -225,9 +246,10 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="vip.js?v=8"></script>
-<script src="i18n.js?v=8"></script>
-<script src="app.js?v=8"></script>
-<script src="exact.js?v=8"></script>
+<script src="vip.js?v=9"></script>
+<script src="i18n.js?v=9"></script>
+<script src="app.js?v=9"></script>
+<script src="exact.js?v=9"></script>
+<script src="tier.js?v=9"></script>
 </body>
 </html>

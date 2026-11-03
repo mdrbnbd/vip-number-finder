@@ -192,16 +192,24 @@
     if (i >= 0) favs.splice(i, 1); else favs.unshift({ ...item, at: Date.now() });
     LS.set('vnf-favs-v1', favs); toast(T(i >= 0 ? 'tFavDel' : 'tFavAdd')); updateFavBtn(); scheduleRender();
   }
-  const view = { tab: 'found', star: 'all', sort: 'new', q: '', grp: 'all' };
-  const GRPS = [['all', 'সব', 'All'], ['reg', 'রেগুলার', 'Regular'], ['gold', 'গোল্ড', 'Gold'], ['prem', 'প্রিমিয়াম', 'Premium'], ['elite', 'এলিট', 'Elite']];
-  const grpOf = (it) => { const v = vipOfItem(it); return v >= 90 ? 'elite' : v >= 75 ? 'prem' : v >= 60 ? 'gold' : 'reg'; };
-  const grpName = (g) => { const x = GRPS.find((y) => y[0] === g); return lang === 'en' ? x[2] : x[1]; };
+  const view = { tab: 'found', star: 'all', sort: ['tier', 'new', 'num'].includes(LS.get('vnf-sort9', 'tier')) ? LS.get('vnf-sort9', 'tier') : 'tier', q: '', grp: 'all' };
+  /* v9: tier system (Diamond > Gold > Premium > Regular) — see VIP.TIER_RULES */
+  const GRPS = ['all', 'diamond', 'gold', 'premium', 'regular'];
+  const tierOfItem = (it) => (it._t9 && it._t9.v === 9 ? it._t9 : (it._t9 = { v: 9, ...V.tierInfo(it.msisdn) }));
+  const grpOf = (it) => tierOfItem(it).tier;
+  const tScore = (it) => tierOfItem(it).tscore;
+  const grpName = (g) => (g[0] === '+' ? grpName(g.slice(1)) + '+' : g === 'all' ? (lang === 'en' ? 'All' : 'সব') : (lang === 'en' ? V.TIER9[g].en : V.TIER9[g].bn));
+  const grpIcon = (g) => (g === 'all' ? '✨' : V.TIER9[g.replace('+', '')].icon);
+  const ruleText = (it) => { const r = tierOfItem(it).rule; return r ? (lang === 'en' ? r.en : r.bn) : ''; };
+  const KEEP = { exact: 1, tier: 1 }; // sources that bypass the (hidden) min-score slider and are saved in history
   const HKEY = 'vnf-history-v1';
-  function saveHist() { try { localStorage.setItem(HKEY, JSON.stringify([...results.values()].filter((x) => x.src === 'exact'))); } catch {} }
+  function saveHist() { try { localStorage.setItem(HKEY, JSON.stringify([...results.values()].filter((x) => KEEP[x.src]).map(({ _t9, ...x }) => x))); } catch {} }
   function renderGrps(all) {
     const box = $('grpTabs'); if (!box) return; box.innerHTML = '';
-    GRPS.forEach(([g]) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.g = g; b.className = g === view.grp ? 'on' : '';
-      b.innerHTML = `${grpName(g)} <i>${N(g === 'all' ? all.length : all.filter((x) => grpOf(x) === g).length)}</i>`;
+    const cnt = (g) => (g === 'all' ? all.length : g[0] === '+' ? all.filter((x) => tierOfItem(x).rank >= V.TIER9[g.slice(1)].rank).length : all.filter((x) => grpOf(x) === g).length);
+    (view.grp[0] === '+' ? [GRPS[0], view.grp, ...GRPS.slice(1)] : GRPS).forEach((g) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.g = g; b.className = 'tc-' + g.replace('+', '') + (g[0] === '+' ? ' plus' : '') + (g === view.grp ? ' on' : '');
+      b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', g === view.grp);
+      b.innerHTML = `<span>${grpIcon(g)}</span> ${grpName(g)} <i>${N(cnt(g))}</i>`;
       b.onclick = () => { view.grp = g; scheduleRender(); }; box.appendChild(b); });
     $('clearHist').textContent = lang === 'en' ? '🗑 Clear history' : '🗑 হিস্টোরি মুছুন';
   }
@@ -222,16 +230,26 @@
     document.querySelectorAll('#tierFilter button').forEach((x) => x.classList.toggle('on', x === b)); view.star = b.dataset.tier; scheduleRender();
   }));
   $('sortSel').onchange = () => { view.sort = $('sortSel').value; scheduleRender(); };
+  function renderSort() {
+    const el = $('sortSel9'); if (!el) return;
+    const o = lang === 'en' ? { tier: '🏆 Best tier first', new: '🕒 Newest first', num: '🔢 By number' } : { tier: '🏆 সেরা টিয়ার আগে', new: '🕒 নতুন আগে', num: '🔢 নাম্বার অনুযায়ী' };
+    const want = Object.keys(o).map((k) => `<option value="${k}"${view.sort === k ? ' selected' : ''}>${o[k]}</option>`).join('');
+    if (el.dataset.l !== lang + view.sort) { el.innerHTML = want; el.dataset.l = lang + view.sort; }
+    const lb = $('sortLbl9'); if (lb) lb.textContent = lang === 'en' ? 'Sort' : 'সাজান';
+  }
+  if ($('sortSel9')) $('sortSel9').onchange = () => { view.sort = $('sortSel9').value; LS.set('vnf-sort9', view.sort); scheduleRender(); };
   $('searchBox').oninput = () => { view.q = toEn($('searchBox').value).replace(/\D/g, ''); scheduleRender(); };
 
   function baseItems() { return view.tab === 'favs' ? favs.slice() : [...results.values()]; }
   function currentItems() {
     let arr = baseItems();
-    arr = arr.filter((x) => x.src === 'exact' || vipOfItem(x) >= S.minScore);
+    arr = arr.filter((x) => KEEP[x.src] || vipOfItem(x) >= S.minScore);
     if (view.star !== 'all') arr = arr.filter((x) => String(starOf(x)) === view.star);
-    if (view.grp !== 'all') arr = arr.filter((x) => grpOf(x) === view.grp);
+    if (view.grp[0] === '+') { const mr = V.TIER9[view.grp.slice(1)].rank; arr = arr.filter((x) => tierOfItem(x).rank >= mr); }
+    else if (view.grp !== 'all') arr = arr.filter((x) => grpOf(x) === view.grp);
     if (view.q) arr = arr.filter((x) => V.localOf(x.msisdn).includes(view.q));
-    const cmp = { score: (a, b) => vipOfItem(b) - vipOfItem(a) || b.score - a.score || a.msisdn.localeCompare(b.msisdn), new: newest, num: (a, b) => a.msisdn.localeCompare(b.msisdn) }[view.sort];
+    const byTier = (a, b) => tierOfItem(b).rank - tierOfItem(a).rank || tScore(b) - tScore(a) || b.score - a.score || a.msisdn.localeCompare(b.msisdn);
+    const cmp = { tier: byTier, score: byTier, new: newest, num: (a, b) => a.msisdn.localeCompare(b.msisdn) }[view.sort] || byTier;
     return arr.sort(cmp);
   }
   function numHtml(item) {
@@ -252,11 +270,10 @@
   const reasonText = (r) => (lang === 'en' ? r.en || r.why : r.why);
   function card(item) {
     const st = starOf(item);
-    const el = document.createElement('div'); el.className = 'item s' + st;
-    const top = item.reasons && item.reasons[0] ? reasonText(item.reasons[0]) : item.cat ? T('cats')[item.cat][0] + (item.qq ? ' ' + N(item.qq) : '') : T('regular');
+    const el = document.createElement('div'); el.className = 'item s' + st + ' tier-' + grpOf(item);
+    const top = ruleText(item) || item.reasons && item.reasons[0] ? reasonText(item.reasons[0]) : item.cat ? T('cats')[item.cat][0] + (item.qq ? ' ' + N(item.qq) : '') : T('regular');
     el.innerHTML = `<div class="item-top"><div class="badges">
-        <span class="badge grp g-${grpOf(item)}">${grpName(grpOf(item))}</span>
-        <span class="badge vipsc">VIP ${N(vipOfItem(item))}</span>
+        <span class="badge tierb tb-${grpOf(item)}">${grpIcon(grpOf(item))} ${grpName(grpOf(item))} <b>${N(tScore(item))}</b></span>
         <span class="badge ${item.brand}">${opName(item.brand)}</span>
         ${item.src === 'bonus' ? `<span class="badge bonus">${T('near')}</span>` : ''}
         ${item.src === 'list' && item.avail === true ? `<span class="badge free">${T('freeNow')}</span>` : ''}
@@ -279,8 +296,8 @@
   function scheduleRender() { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } }
   function render() {
     renderQueued = false; saveHist();
-    const all = baseItems(), base = all.filter((x) => x.src === 'exact' || vipOfItem(x) >= S.minScore);
-    $('cAll').textContent = N(base.length); renderGrps(all.filter((z) => z.src === 'exact' || vipOfItem(z) >= S.minScore));
+    const all = baseItems(), base = all.filter((x) => KEEP[x.src] || vipOfItem(x) >= S.minScore);
+    $('cAll').textContent = N(base.length); renderGrps(base); renderSort();
     [5, 4, 3].forEach((s) => ($('c' + s).textContent = N(base.filter((x) => starOf(x) === s).length)));
     $('resTitle').textContent = view.tab === 'favs' ? T('favsTitle', N(favs.length)) : all.some((x) => x.src === 'list') ? T('resTitleList', N(base.length), N(all.length)) : results.size || searchState !== 'idle' ? T('resTitle', N(results.size)) : T('resTitle0');
     const list = $('list'); const items = currentItems();
@@ -306,7 +323,7 @@
     catch { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch {} ta.remove(); return ok; }
   }
   function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
-  const shareText = (item) => T('shareTxt', V.pretty(item.msisdn), lang === 'bn' ? OPS[item.brand].label : OPS[item.brand].en, starName(starOf(item)), OPS[item.brand].buy);
+  const shareText = (item) => T('shareTxt', V.pretty(item.msisdn), lang === 'bn' ? OPS[item.brand].label : OPS[item.brand].en, grpIcon(grpOf(item)) + ' ' + grpName(grpOf(item)), OPS[item.brand].buy);
   const actions = {
     del: (item) => { results.delete(item.msisdn); scheduleRender(); },
     async buy(item) {
@@ -334,8 +351,11 @@
     const st = starOf(item);
     $('whyTitle').innerHTML = numHtml(item);
     const rows = (item.reasons || []).map((r) => `<div class="why-row"><span>${esc(reasonText(r))}</span><b>+${N(r.p)}</b></div>`).join('') || `<p class="muted">${T('whyNone')}</p>`;
-    $('whyContent').innerHTML = rows + `<div class="why-total"><span>${T('whyTotal')}</span><span>${N(vipOfItem(item))} · ${st ? '★'.repeat(st) + ' ' : ''}${starName(st)}</span></div>
-      <p class="hint">${T('whyTiers')}</p>
+    const ti = tierOfItem(item), g = ti.tier;
+    const tierRows = ti.rules.length > 1 ? ti.rules.slice(1).map((r) => `<div class="why-row"><span>${V.TIER9[r.tier].icon} ${esc(lang === 'en' ? r.en : r.bn)}</span><b>${esc(grpName(r.tier))}</b></div>`).join('') : '';
+    $('whyContent').innerHTML = `<div class="why-tier tb-${g}"><span class="wt-ic">${grpIcon(g)}</span><div><b>${grpName(g)}</b><small>${esc(ruleText(item) || T('whyNone'))}</small></div><span class="wt-sc">${N(ti.tscore)}<small>/১০০</small></span></div>`
+      + tierRows + (rows ? `<p class="hint">${lang === 'en' ? 'Beauty points' : 'সৌন্দর্য পয়েন্ট'}</p>` + rows : '') + `<div class="why-total"><span>${lang === 'en' ? 'Tier score' : 'টিয়ার স্কোর'}</span><span>${N(ti.tscore)} · ${grpIcon(g)} ${grpName(g)}</span></div>
+      <p class="hint">${lang === 'en' ? '💎 Diamond 90–100 · 🥇 Gold 75–89 · 💜 Premium 60–74 · ▫️ Regular below 60' : '💎 ডায়মন্ড ৯০–১০০ · 🥇 গোল্ড ৭৫–৮৯ · 💜 প্রিমিয়াম ৬০–৭৪ · ▫️ সাধারণ ৬০-এর নিচে'}</p>
       <div class="acts2"><button class="btn ghost" id="whyShare" type="button">📤</button><button class="btn buy" id="whyBuy" type="button">${T('buy')}</button></div>`;
     $('whyShare').onclick = () => actions.share(item); $('whyBuy').onclick = () => actions.buy(item);
     $('whySheet').classList.remove('hidden');
@@ -347,7 +367,7 @@
   $('txtBtn').onclick = async () => {
     const it = currentItems(); if (!it.length) return toast(T('tNothing'));
     const stamp = new Date().toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB');
-    const lines = [`${T('txtHead')} — ${stamp}`, ''].concat(it.map((x) => `${V.localOf(x.msisdn)}  VIP ${vipOfItem(x)}  ${'★'.repeat(starOf(x))} ${starName(starOf(x))}  ${opName(x.brand)}`));
+    const lines = [`${T('txtHead')} — ${stamp}`, ''].concat(it.map((x) => `${V.localOf(x.msisdn)}  ${grpIcon(grpOf(x))} ${grpName(grpOf(x))} ${tScore(x)}  ${opName(x.brand)}  ${ruleText(x)}`));
     const ops = [...new Set(it.map((x) => x.brand))]; lines.push('', ...ops.map((b) => `${T('txtBuy')} ${opName(b)}: ${OPS[b].buy}`));
     const text = lines.join('\n');
     download('vip-numbers.txt', '\ufeff' + text, 'text/plain;charset=utf-8'); await copyText(text);
@@ -356,7 +376,7 @@
   $('copyAllBtn').onclick = async () => { const it = currentItems(); if (!it.length) return toast(T('tNothing')); toast((await copyText(it.map((x) => V.localOf(x.msisdn)).join('\n'))) ? T('tCount', N(it.length)) : T('tCopyFail')); };
   $('csvBtn').onclick = () => {
     const it = currentItems(); if (!it.length) return toast(T('tNothing'));
-    const rows = [['number', 'operator', 'vip_score', 'stars', 'why', 'buy_url']].concat(it.map((x) => [V.localOf(x.msisdn), x.brand, vipOfItem(x), starOf(x), (x.reasons || []).map(reasonText).join('; '), OPS[x.brand].buy]));
+    const rows = [['number', 'operator', 'tier', 'tier_score', 'tier_rule', 'vip_score', 'why', 'buy_url']].concat(it.map((x) => [V.localOf(x.msisdn), x.brand, V.TIER9[grpOf(x)].en, tScore(x), tierOfItem(x).rule ? tierOfItem(x).rule.en : '', vipOfItem(x), (x.reasons || []).map(reasonText).join('; '), OPS[x.brand].buy]));
     download('vip-numbers.csv', '\ufeff' + rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n'), 'text/csv;charset=utf-8');
   };
 
@@ -678,7 +698,8 @@
   // v8: GP generator removed — drop leftover v7 GP-only keys
   try { ['vnf-history-gp-v1', 'vnf-netop', 'vnf-exin-GP', 'vnf-exin-ROBI'].forEach((k) => localStorage.removeItem(k)); } catch {}
   scheduleRender();
-  window.VNF = { addResult, addBonus, callApi: (m, b) => callApi(m, b, true), learnHead, toast: (t) => toast(t), lang: () => lang, showFound: () => { view.tab = 'found'; searchState = 'running'; scheduleRender(); }, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
+  window.VNF = { topHeads, heads: () => heads, saveHeads, isTried: (b, sub) => !!triedLS[b + '|' + sub], markTried: (b, sub) => { triedLS[b + '|' + sub] = Date.now(); }, saveTried: () => LS.set('vnf-tried-v1', triedLS),
+    setGrp: (g) => { view.grp = g; view.tab = 'found'; scheduleRender(); }, setSort: (k) => { view.sort = k; LS.set('vnf-sort9', k); scheduleRender(); }, tierOfItem, addResult, addBonus, callApi: (m, b) => callApi(m, b, true), learnHead, toast: (t) => toast(t), lang: () => lang, showFound: () => { view.tab = 'found'; searchState = 'running'; scheduleRender(); }, setDone: () => { searchState = 'done'; scheduleRender(); }, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
   $('qInput').value = S.q[S.cat] || '';
   setOp(S.op); renderLimit(); renderMode(); renderMin(); applyLang();
 })();

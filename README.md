@@ -43,3 +43,14 @@ node test.js                  # scoring/pattern টেস্ট
 > নাম্বারগুলো অপারেটরের পাবলিক availability চেক থেকে আসে; কেনাকাটা শুধু অফিসিয়াল সাইটে হয়। রবি/এয়ারটেলের সাথে কোনো সম্পর্ক নেই।
 
 Made by Robin · [dfaster.com](https://dfaster.com) · [GitHub](https://github.com/mdrbnbd)
+
+## v9 — VIP tiers (💎 Diamond · 🥇 Gold · 💜 Premium)
+Every number gets a tier badge + tier score (rules on the 8 digits after 018/016, highest match wins):
+- **💎 Diamond (90–100):** 6+ same digits in a row, 7+ digit sequence, pair ×4 (18181818), AAAABBBB, full 8-digit mirror.
+- **🥇 Gold (75–89):** 5 same in a row, 6-digit sequence, ends ABABAB / AAABBB / AABBCC / ABCABC, double block ABCD-ABCD, ends 0000 or AA+BBBB.
+- **💜 Premium (60–74):** 4 same in a row, 4+ sequence at the end (or 5 inside), ends ABAB / AABB / AAA, lucky 786 / 1971 / 1952, last-6 mirror.
+- **▫️ Regular:** none of the above.
+
+"👑 Find by category": one tap checks generated Diamond/Gold/Premium candidates with the official Robi availability
+endpoint (3 lanes, ~0.6 s gap, shared back-off, max 240 checks per tap) and shows only numbers reported available.
+Results can be filtered by tier chips and sorted by tier/score. Tests: `node test-tiers.js`.

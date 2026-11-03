@@ -551,9 +551,106 @@
     return spec.pos === 'any' && spec.mid && spec.templates.length > 1 ? spec.base : spec.templates[0];
   }
 
+  /* ---------- v9 VIP tiers: Diamond > Gold > Premium > Regular (rules on the 8 digits after 018/016) ---------- */
+  const TIER9 = {
+    diamond: { rank: 3, min: 90, max: 100, icon: '💎', bn: 'ডায়মন্ড', en: 'Diamond' },
+    gold:    { rank: 2, min: 75, max: 89,  icon: '🥇', bn: 'গোল্ড', en: 'Gold' },
+    premium: { rank: 1, min: 60, max: 74,  icon: '💜', bn: 'প্রিমিয়াম', en: 'Premium' },
+    regular: { rank: 0, min: 0,  max: 59,  icon: '▫️', bn: 'সাধারণ', en: 'Regular' }
+  };
+  const TIER9_ORDER = ['diamond', 'gold', 'premium', 'regular'];
+  const seqMax = (s) => Math.max(longestSeq(s, 'asc'), longestSeq(s, 'desc'));
+  const tSeqMax = (s) => Math.max(trailingSeq(s, 'asc'), trailingSeq(s, 'desc'));
+  // [tier, id, bn, en, test(s)] — first match of the highest tier wins; all matches are listed as reasons
+  const TIER_RULES = [
+    ['diamond', 'run6',  '৬+ একই সংখ্যা পরপর (যেমন ৭৭৭৭৭৭)', '6+ identical digits in a row (e.g. 777777)', (s) => longestRun(s) >= 6],
+    ['diamond', 'seq7',  '৭+ অংকের ক্রমিক (১২৩৪৫৬৭ / ৯৮৭৬৫৪৩)', '7+ digit sequence (1234567 / 9876543)', (s) => seqMax(s) >= 7],
+    ['diamond', 'abx4',  'পুরো জোড়া ৪ বার (১৮১৮১৮১৮)', 'Pair ×4 (18181818)', (s) => /^(\d)(?!\1)(\d)(\1\2){3}$/.test(s)],
+    ['diamond', 'a4b4',  'AAAABBBB (৫৫৫৫৯৯৯৯)', 'AAAABBBB (55559999)', (s) => /^(\d)\1{3}(?!\1)(\d)\2{3}$/.test(s)],
+    ['diamond', 'mir8',  'পুরো ৮ অংক আয়না (১২৩৪৪৩২১)', 'Full 8-digit mirror (12344321)', (s) => s === rev(s) && longestRun(s) < 6],
+    ['gold', 'run5',     '৫টি একই সংখ্যা পরপর (৭৭৭৭৭)', '5 identical digits in a row (77777)', (s) => longestRun(s) === 5],
+    ['gold', 'seq6',     '৬ অংকের ক্রমিক (১২৩৪৫৬)', '6-digit sequence (123456)', (s) => seqMax(s) === 6],
+    ['gold', 'ab3',      'শেষে ABABAB (১২১২১২)', 'Ends ABABAB (121212)', (s) => /(\d)(?!\1)(\d)\1\2\1\2$/.test(s)],
+    ['gold', 'a3b3',     'শেষে AAABBB (৫৫৫৭৭৭)', 'Ends AAABBB (555777)', (s) => /(\d)\1\1(?!\1)(\d)\2\2$/.test(s)],
+    ['gold', 'aabbcc',   'শেষে AABBCC (১১২২৩৩)', 'Ends AABBCC (112233)', (s) => /(\d)\1(?!\1)(\d)\2(?!\2)(\d)\3$/.test(s)],
+    ['gold', 'dbl4',     'ডাবল ব্লক ABCD-ABCD (১৫৭৯-১৫৭৯)', 'Double block ABCD-ABCD (1579-1579)', (s) => s.slice(0, 4) === s.slice(4)],
+    ['gold', 'abc2',     'শেষে ABCABC (৭৮৬৭৮৬)', 'Ends ABCABC (786786)', (s) => { const t = s.slice(-6); return t.slice(0, 3) === t.slice(3) && new Set(t).size === 3; }],
+    ['gold', 'end4x',    'শেষে ০০০০ বা জোড়া + ৪ একই (৫৫-৭৭৭৭)', 'Ends 0000, or a pair + 4 same (55-7777)', (s) => trailingRun(s) === 4 && (s.endsWith('0000') || (s[2] === s[3] && s[3] !== s[4]))],
+    ['premium', 'run4',  '৪টি একই সংখ্যা পরপর (৭৭৭৭)', '4 identical digits in a row (7777)', (s) => longestRun(s) === 4],
+    ['premium', 'seq4',  'শেষে ৪+ ক্রমিক বা মাঝে ৫ ক্রমিক (১২৩৪)', '4+ sequence at the end or 5 in the middle (1234)', (s) => tSeqMax(s) >= 4 || seqMax(s) >= 5],
+    ['premium', 'abab',  'শেষে ABAB জোড়া (১২১২)', 'Ends ABAB (1212)', (s) => /(\d)(?!\1)(\d)\1\2$/.test(s)],
+    ['premium', 'aabb',  'শেষে AABB (১১২২)', 'Ends AABB (1122)', (s) => /(\d)\1(?!\1)(\d)\2$/.test(s)],
+    ['premium', 'end3',  'শেষে ৩টি একই (৭৭৭ / ০০০)', 'Ends with 3 same (777 / 000)', (s) => trailingRun(s) === 3],
+    ['premium', 'lucky', 'লাকি শেষ (৭৮৬ / ১৯৭১ / ১৯৫২)', 'Lucky ending (786 / 1971 / 1952)', (s) => /(786|1971|1952)$/.test(s)],
+    ['premium', 'mir6',  'শেষ ৬ অংক আয়না (১২৩৩২১)', 'Last 6 digits mirrored (123321)', (s) => { const t = s.slice(-6); return t === rev(t); }]
+  ];
+  function tierInfo(msisdnOrSub) {
+    const s = subOf(msisdnOrSub);
+    const hits = /^\d{8}$/.test(s) ? TIER_RULES.filter((r) => r[4](s)) : [];
+    const tier = hits.length ? hits[0][0] : 'regular';
+    const T9 = TIER9[tier];
+    const vip = vipOf(score(String(msisdnOrSub).length > 8 ? msisdnOrSub : '88018' + s).score);
+    const pts = tier === 'regular' ? Math.min(T9.max, vip) : T9.min + Math.round((T9.max - T9.min) * Math.min(1, vip / 100));
+    return { tier, rank: T9.rank, tscore: pts, rule: hits[0] ? { id: hits[0][1], bn: hits[0][2], en: hits[0][3] } : null,
+      rules: hits.map((r) => ({ tier: r[0], id: r[1], bn: r[2], en: r[3] })) };
+  }
+  /* Candidate subs (8 digits, starting with head) whose tier is >= target. Pattern-first generation, then filtered by tierInfo.
+     Small spaces (<= 4 free digits) are enumerated exhaustively. Returns best-first. */
+  function tierCandidates(opt) {
+    const head = String(opt.head || ''), target = TIER9[opt.target] ? opt.target : 'gold', n = opt.n || 40;
+    const minRank = TIER9[target].rank, rand = opt.rand || Math.random, skip = opt.skip || (() => false);
+    const out = [], local = new Set();
+    const keep = (sub) => {
+      if (!sub || sub.length !== 8 || !/^\d{8}$/.test(sub) || !sub.startsWith(head) || local.has(sub) || skip(sub)) return;
+      const ti = tierInfo(sub); if (ti.rank < minRank) return;
+      local.add(sub); out.push({ sub, ...ti });
+    };
+    const free = 8 - head.length;
+    if (free <= 4) {
+      const m = Math.pow(10, free);
+      for (let i = 0; i < m; i++) keep(head + String(i).padStart(free, '0'));
+      out.sort((a, b) => b.rank - a.rank || b.tscore - a.tscore);
+      return out.slice(0, opt.all ? out.length : n * 50);
+    }
+    const D = '0123456789'.split('');
+    const d1 = () => D[R(rand, 10)];
+    const d2 = () => { const a = d1(); let b = d1(); while (b === a) b = d1(); return [a, b]; };
+    const d3 = () => { const [a, b] = d2(); let c = d1(); while (c === a || c === b) c = d1(); return [a, b, c]; };
+    const sq = (len) => { const up = rand() < 0.6; const st = R(rand, 11 - len); return up ? seqOf('asc', st, len) : seqOf('desc', st, len); };
+    const tail = (t) => (head.length + t.length <= 8 ? head + fill(rand, 8 - head.length - t.length, D) + t : null);
+    const lead4 = () => lead(rand, head, 4, D);
+    const G = {
+      diamond: [
+        () => tail(d1().repeat(6 + R(rand, 2))), () => tail(sq(7 + R(rand, 2))),
+        () => { const [a, b] = d2(); return (a + b).repeat(4); }, () => { const [a, b] = d2(); return a.repeat(4) + b.repeat(4); },
+        () => { const x = lead4(); return x + rev(x); }
+      ],
+      gold: [
+        () => tail(d1().repeat(5)), () => tail(sq(6)), () => { const [a, b] = d2(); return tail((a + b).repeat(3)); },
+        () => { const [a, b] = d2(); return tail(a.repeat(3) + b.repeat(3)); }, () => { const [a, b, c] = d3(); return tail(a + a + b + b + c + c); },
+        () => { const x = lead4(); return x + x; }, () => { const [a, b, c] = d3(); return tail((a + b + c).repeat(2)); },
+        () => (rand() < 0.4 ? tail('0000') : (() => { const [a, b] = d2(); return tail(a + a + b.repeat(4)); })())
+      ],
+      premium: [
+        () => tail(d1().repeat(4)), () => tail(sq(4 + R(rand, 2))), () => { const [a, b] = d2(); return tail(a + b + a + b); },
+        () => { const [a, b] = d2(); return tail(a + a + b + b); }, () => tail(d1().repeat(3)),
+        () => tail(['786', '1971', '1952'][R(rand, 3)]), () => { const x = fill(rand, 3, D); return tail(x + rev(x)); }
+      ]
+    };
+    const pools = TIER9_ORDER.filter((t) => t !== 'regular' && TIER9[t].rank >= minRank);
+    let tries = 0;
+    while (out.length < n && tries++ < n * 60) {
+      const pool = G[pools[R(rand, pools.length)]];
+      keep(pool[R(rand, pool.length)]());
+    }
+    out.sort((a, b) => b.rank - a.rank || b.tscore - a.tscore);
+    return out;
+  }
+
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
   return { OPS, TIERS, TIER_RANK, toBn, toEn, subOf, localOf, brandOf, pretty, score, tierOf, parsePattern, matchTokens,
     passFilters, makePresets, bdayStrings, buildBatch, mulberry32, trailingRun, trailingSeq, vipOf, starsOf, vipTypes, normBD, parseList, opOfLocal, BD_OPS,
-    patternSpec, matchSpec, unionCount, fillTpl, vipFills, patternSource, previewTpl };
+    patternSpec, matchSpec, unionCount, fillTpl, vipFills, patternSource, previewTpl,
+    TIER9, TIER9_ORDER, TIER_RULES, tierInfo, tierCandidates };
 });

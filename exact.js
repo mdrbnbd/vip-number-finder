@@ -11,14 +11,14 @@
     bn: { title: '🎯 নির্দিষ্ট নাম্বার খুঁজুন (সব কম্বিনেশন)', hint: 'শুরুর কোড আর শেষের সংখ্যা দিন — মাঝের প্রতিটা সম্ভাব্য সংখ্যা রবি সার্ভারে যাচাই হবে, শুধু খালিগুলো দেখাবে।',
       start: 'শুরু (কোড)', end: 'শেষে', more: '➕ প্যাটার্ন (ঐচ্ছিক)', mid: 'মাঝখানে থাকবে (ঐচ্ছিক)', pat: 'প্যাটার্ন, X = যেকোনো সংখ্যা (ঐচ্ছিক)',
       go: '🔍 সব যাচাই শুরু', resume: '▶ আগের জায়গা থেকে চালু', pause: '⏸ বিরতি', cont: '▶ চালু', stop: '⏹ বন্ধ',
-      e_op: 'কোড ০১৮ (রবি) বা ০১৬ (এয়ারটেল) দিয়ে শুরু হতে হবে', e_len: 'মোট ১১ সংখ্যার বেশি হয়ে গেছে', e_empty: 'শুরুর কোড দিন, যেমন 018 বা 01766', e_mid: '"মাঝখানে" সংখ্যাটা খালি ঘরে বসে না',
+      e_op: 'কোড ০১৮ (রবি) বা ০১৬ (এয়ারটেল) দিয়ে শুরু হতে হবে', e_len: 'মোট ১১ সংখ্যার বেশি হয়ে গেছে', e_empty: 'শুরুর কোড দিন, যেমন 018 বা 01815', e_mid: '"মাঝখানে" সংখ্যাটা খালি ঘরে বসে না',
       info: (op, n, eta) => `${op} · মোট ${n}টি কম্বিনেশন যাচাই হবে · আনুমানিক ${eta}`, big: (n) => `${n}টি কম্বিনেশন — অনেক বেশি (সীমা ২,০০,০০০)। আরও সংখ্যা দিয়ে ছোট করুন:`,
       prog: (c, t, f, r) => `${c} / ${t} যাচাই · ${f}টি খালি · ${r}/সেকেন্ড`, done: (t, f) => `✅ শেষ — ${t}টির সবগুলো যাচাই হয়েছে, ${f}টি খালি পাওয়া গেছে`, paused: 'বিরতিতে আছে', stopped: (c, f) => `থামানো হয়েছে — ${c}টি যাচাই, ${f}টি খালি। পরে আবার চালু করা যাবে।`,
       saved: (c, t) => `আগের খোঁজ সংরক্ষিত: ${c} / ${t}`, mC: '🛠 কাস্টমাইজ', mD: '👯 ডাবল', mT: '🔱 ট্রিপল', hC: 'শুরুর কোড আর শেষের সংখ্যা দিন — মাঝের প্রতিটা সম্ভাব্য সংখ্যা যাচাই হবে, শুধু আপনার কোডের খালি নাম্বার দেখাবে।', hD: 'শুধু আপনার কোডের সিরিজে ডাবল/জোড়া প্যাটার্ন (AABB, ABAB, AA·BB·CC) খুঁজবে।', hT: 'শুধু আপনার কোডের সিরিজে ট্রিপল/চারবার একই সংখ্যা (AAA, AAAA…) খুঁজবে।', e_code: 'কমপক্ষে ০১৮ বা ০১৬ সহ কোড দিন, যেমন 01815', pat2: 'প্যাটার্ন, X = যেকোনো সংখ্যা (ঐচ্ছিক)', s: 'সেকেন্ড', m: 'মিনিট', h: 'ঘণ্টা' },
     en: { title: '🎯 Exact search (every combination)', hint: 'Enter the starting code and the ending digits — every possible middle is checked with the Robi server, only AVAILABLE numbers are shown.',
       start: 'Starts with (code)', end: 'Ends with', more: '➕ Pattern (optional)', mid: 'Contains (optional)', pat: 'Pattern, X = any digit (optional)',
       go: '🔍 Check all', resume: '▶ Resume where I left off', pause: '⏸ Pause', cont: '▶ Resume', stop: '⏹ Stop',
-      e_op: 'Code must start with 018 (Robi) or 016 (Airtel)', e_len: 'More than 11 digits in total', e_empty: 'Enter a starting code, e.g. 018 or 01766', e_mid: '"Contains" digits don’t fit in the free positions',
+      e_op: 'Code must start with 018 (Robi) or 016 (Airtel)', e_len: 'More than 11 digits in total', e_empty: 'Enter a starting code, e.g. 018 or 01815', e_mid: '"Contains" digits don’t fit in the free positions',
       info: (op, n, eta) => `${op} · ${n} combinations will be checked · ETA ~${eta}`, big: (n) => `${n} combinations — too many (limit 200,000). Narrow it down:`,
       prog: (c, t, f, r) => `${c} / ${t} checked · ${f} available · ${r}/s`, done: (t, f) => `✅ Done — all ${t} checked, ${f} available`, paused: 'Paused', stopped: (c, f) => `Stopped — ${c} checked, ${f} available. You can resume later.`,
       saved: (c, t) => `Saved search: ${c} / ${t}`, mC: '🛠 Customize', mD: '👯 Double', mT: '🔱 Triple', hC: 'Enter the starting code and the ending digits — every possible middle is checked, only available numbers in YOUR code are shown.', hD: 'Finds double/pair patterns (AABB, ABAB, AA·BB·CC) only inside your code series.', hT: 'Finds triple/quad repeats (AAA, AAAA…) only inside your code series.', e_code: 'Enter a code with 018 or 016, e.g. 01815', pat2: 'Pattern, X = any digit (optional)', s: 's', m: 'min', h: 'h' },
@@ -119,6 +119,7 @@
   }
 
   async function run() {
+    if (window.VNF_TIER && VNF_TIER.running()) return VNF.toast(L() === 'en' ? 'A tier search is running — stop it first' : 'ক্যাটাগরি খোঁজ চলছে — আগে সেটা বন্ধ করুন');
     const s = spec(); if (s.err || s.total > MAX || !s.countable || !s.total) return preview();
     const sv = saved(); const resume = sv && sv.key === s.key && sv.done < sv.total;
     st = { s, next: resume ? sv.idx : 0, done: resume ? sv.done : 0, found: resume ? sv.found : [], paused: false, stop: false, inflight: new Set(), t0: Date.now(), d0: resume ? sv.done : 0, conc: 5, ok: 0, retry: [] };
