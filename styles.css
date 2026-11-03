@@ -278,3 +278,17 @@ body[data-op=BOTH]{--opc:#f05014}
 .ex-bar div { height: 100%; width: 0; background: #16a34a; transition: width .3s; }
 .ex-sug { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; justify-content: center; }
 .ex-sug button { border: 1px solid #111; background: #fff; border-radius: 16px; padding: 4px 10px; font-family: monospace; }
+/* v6: only Customize / Double / Triple */
+.v6 .steps, .v6 #modeSeg, .v6 #opPick, .v6 [data-t="selOp"], .v6 [data-t="selCat"], .v6 #cats, .v6 #catHint, .v6 #patBox, .v6 .limit-row, .v6 #scanForm, .v6 #listPane, .v6 #progressBox, .v6 .minscore, .v6 #tierFilter, .v6 #bonusCard, .v6 #moreBox, .v6 .tagline { display: none !important; }
+.ex-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+.ex-modes button { padding: 10px 4px; border: 2px solid #ddd; border-radius: 12px; background: #fff; font-weight: 700; font-size: 15px; color: #111; }
+.ex-modes button.on { border-color: #111; background: #111; color: #fff; }
+.ex2:has(#exEndWrap.hidden) { grid-template-columns: 1fr; }
+.grp-tabs { display: flex; gap: 6px; overflow-x: auto; margin: 6px 0 10px; padding-bottom: 2px; }
+.grp-tabs button { flex: 0 0 auto; border: 1.5px solid #ccc; background: #fff; color: #111; border-radius: 18px; padding: 6px 12px; font-weight: 700; }
+.grp-tabs button.on { background: #111; color: #fff; border-color: #111; }
+.grp-tabs i { font-style: normal; opacity: .75; margin-left: 2px; }
+.badge.grp.g-reg { background: #e5e7eb; color: #111; } .badge.grp.g-gold { background: #fde68a; color: #7a4b00; }
+.badge.grp.g-prem { background: #c7d2fe; color: #1e1b4b; } .badge.grp.g-elite { background: #111; color: #ffd54a; }
+.mini.del { color: #c62828; }
+.btn.danger { color: #c62828; border-color: #c62828; }

@@ -192,7 +192,19 @@
     if (i >= 0) favs.splice(i, 1); else favs.unshift({ ...item, at: Date.now() });
     LS.set('vnf-favs-v1', favs); toast(T(i >= 0 ? 'tFavDel' : 'tFavAdd')); updateFavBtn(); scheduleRender();
   }
-  const view = { tab: 'found', star: 'all', sort: 'new', q: '' };
+  const view = { tab: 'found', star: 'all', sort: 'new', q: '', grp: 'all' };
+  const GRPS = [['all', 'সব', 'All'], ['reg', 'রেগুলার', 'Regular'], ['gold', 'গোল্ড', 'Gold'], ['prem', 'প্রিমিয়াম', 'Premium'], ['elite', 'এলিট', 'Elite']];
+  const grpOf = (it) => { const v = vipOfItem(it); return v >= 90 ? 'elite' : v >= 75 ? 'prem' : v >= 60 ? 'gold' : 'reg'; };
+  const grpName = (g) => { const x = GRPS.find((y) => y[0] === g); return lang === 'en' ? x[2] : x[1]; };
+  const HKEY = 'vnf-history-v1';
+  function saveHist() { try { localStorage.setItem(HKEY, JSON.stringify([...results.values()].filter((x) => x.src === 'exact'))); } catch {} }
+  function renderGrps(all) {
+    const box = $('grpTabs'); if (!box) return; box.innerHTML = '';
+    GRPS.forEach(([g]) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.g = g; b.className = g === view.grp ? 'on' : '';
+      b.innerHTML = `${grpName(g)} <i>${N(g === 'all' ? all.length : all.filter((x) => grpOf(x) === g).length)}</i>`;
+      b.onclick = () => { view.grp = g; scheduleRender(); }; box.appendChild(b); });
+    $('clearHist').textContent = lang === 'en' ? '🗑 Clear history' : '🗑 হিস্টোরি মুছুন';
+  }
   let seqN = 0; const seen = new Set(); let firstPaint = true;
   const rm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const newest = (a, b) => (b.seq || 0) - (a.seq || 0) || (b.at || 0) - (a.at || 0);
@@ -217,6 +229,7 @@
     let arr = baseItems();
     arr = arr.filter((x) => x.src === 'exact' || vipOfItem(x) >= S.minScore);
     if (view.star !== 'all') arr = arr.filter((x) => String(starOf(x)) === view.star);
+    if (view.grp !== 'all') arr = arr.filter((x) => grpOf(x) === view.grp);
     if (view.q) arr = arr.filter((x) => V.localOf(x.msisdn).includes(view.q));
     const cmp = { score: (a, b) => vipOfItem(b) - vipOfItem(a) || b.score - a.score || a.msisdn.localeCompare(b.msisdn), new: newest, num: (a, b) => a.msisdn.localeCompare(b.msisdn) }[view.sort];
     return arr.sort(cmp);
@@ -242,8 +255,8 @@
     const el = document.createElement('div'); el.className = 'item s' + st;
     const top = item.reasons && item.reasons[0] ? reasonText(item.reasons[0]) : item.cat ? T('cats')[item.cat][0] + (item.qq ? ' ' + N(item.qq) : '') : T('regular');
     el.innerHTML = `<div class="item-top"><div class="badges">
+        <span class="badge grp g-${grpOf(item)}">${grpName(grpOf(item))}</span>
         <span class="badge vipsc">VIP ${N(vipOfItem(item))}</span>
-        <span class="badge st s${st}">${st ? '★'.repeat(st) + ' ' : ''}${starName(st)}</span>
         <span class="badge ${item.brand}">${opName(item.brand)}</span>
         ${item.src === 'bonus' ? `<span class="badge bonus">${T('near')}</span>` : ''}
         ${item.src === 'list' && item.avail === true ? `<span class="badge free">${T('freeNow')}</span>` : ''}
@@ -251,6 +264,7 @@
         </div>
         <button class="mini" data-a="verify" type="button" aria-label="verify">🔄</button>
         <button class="mini fav ${isFav(item.msisdn) ? 'on' : ''}" data-a="fav" type="button" aria-label="favourite">${isFav(item.msisdn) ? '★' : '☆'}</button>
+        <button class="mini del" data-a="del" type="button" aria-label="delete">✕</button>
       </div>
       <div class="num">${numHtml(item)}</div>
       <div class="reason">${esc(top)} · <button class="link-btn" data-a="why" type="button">${T('why')}</button></div>
@@ -264,9 +278,9 @@
   let renderQueued = false;
   function scheduleRender() { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } }
   function render() {
-    renderQueued = false; renderBonus();
+    renderQueued = false; saveHist();
     const all = baseItems(), base = all.filter((x) => x.src === 'exact' || vipOfItem(x) >= S.minScore);
-    $('cAll').textContent = N(base.length);
+    $('cAll').textContent = N(base.length); renderGrps(all.filter((z) => z.src === 'exact' || vipOfItem(z) >= S.minScore));
     [5, 4, 3].forEach((s) => ($('c' + s).textContent = N(base.filter((x) => starOf(x) === s).length)));
     $('resTitle').textContent = view.tab === 'favs' ? T('favsTitle', N(favs.length)) : all.some((x) => x.src === 'list') ? T('resTitleList', N(base.length), N(all.length)) : results.size || searchState !== 'idle' ? T('resTitle', N(results.size)) : T('resTitle0');
     const list = $('list'); const items = currentItems();
@@ -286,15 +300,6 @@
     if (hid) { const p = document.createElement('p'); p.className = 'hint hidden-note'; p.textContent = '🔽 ' + T('emptyMin', N(hid)); frag.appendChild(p); }
     list.appendChild(frag);
   }
-  function renderBonus() {
-    $('bonusCard').classList.toggle('hidden', !bonus.size || view.tab === 'favs');
-    $('bonusTitle').textContent = T('bonusTitle', N(bonus.size));
-    const list = $('bonusList');
-    keepScroll(list, () => { list.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    [...bonus.values()].filter((x) => vipOfItem(x) >= S.minScore).sort(newest).slice(0, 60).forEach((it) => frag.appendChild(mark(card(it), it)));
-    list.appendChild(frag); });
-  }
 
   async function copyText(t) {
     try { await navigator.clipboard.writeText(t); return true; }
@@ -303,6 +308,7 @@
   function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
   const shareText = (item) => T('shareTxt', V.pretty(item.msisdn), lang === 'bn' ? OPS[item.brand].label : OPS[item.brand].en, starName(starOf(item)), OPS[item.brand].buy);
   const actions = {
+    del: (item) => { results.delete(item.msisdn); scheduleRender(); },
     async buy(item) {
       const ok = await copyText(V.localOf(item.msisdn));
       toast(ok ? T('tBuy') : T('tRemember', N(V.localOf(item.msisdn))));
@@ -666,6 +672,10 @@
   $('installBtn').onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $('installBtn').classList.add('hidden'); };
   if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
+  try { (JSON.parse(localStorage.getItem(HKEY) || '[]')).forEach((it) => { it.seq = ++seqN; seen.add(it.msisdn); results.set(it.msisdn, it); }); if (results.size) searchState = 'done'; } catch {}
+  $('clearHist').onclick = () => { if (!confirm(lang === 'en' ? 'Delete all saved results and scan progress?' : 'সব সংরক্ষিত ফলাফল ও স্ক্যানের অগ্রগতি মুছে ফেলবেন?')) return;
+    results.clear(); bonus.clear(); localStorage.removeItem(HKEY); localStorage.removeItem('vnf-exact-v1'); searchState = 'idle'; scheduleRender(); if (window.VNF_EXACT) VNF_EXACT.reset(); };
+  scheduleRender();
   window.VNF = { addResult, addBonus, callApi: (m, b) => callApi(m, b, true), learnHead, toast: (t) => toast(t), lang: () => lang, showFound: () => { view.tab = 'found'; searchState = 'running'; scheduleRender(); }, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
   $('qInput').value = S.q[S.cat] || '';
   setOp(S.op); renderLimit(); renderMode(); renderMin(); applyLang();
