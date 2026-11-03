@@ -2,6 +2,13 @@
 
 রবি (০১৮) ও এয়ারটেল (০১৬) এর **খালি থাকা** ভিআইপি নাম্বার এক ট্যাপে খোঁজার স্ট্যাটিক ওয়েব অ্যাপ। GitHub Pages-এ সরাসরি চলে, কোনো build step নেই।
 
+## v4
+
+- **Robi + Airtel** together: every scan runs on 018 and 016, each result labelled with its operator.
+- VIP types: All VIP, Triple / Four Same, Double Pair, Sequence, Mirror / Palindrome, Lucky / Special (786, 1971, 2024, 007, 000; numbers with 420 are marked down).
+- **VIP score 0–100** on every card and a **Minimum VIP score** slider (default 50) that filters live. Stars: 5★ Elite ≥ 85 · 4★ Premium ≥ 70 · 3★ Regular ≥ 50 · below 50 = normal.
+- **My list** mode: paste numbers (01…, +880, 880, Bangla digits) or load a .txt/.csv, or tick *Use sample data*; scores and sorts them offline, shows invalid/duplicate counts, and can optionally check Robi/Airtel availability against the official API (same polite throttling).
+
 ## Smart Search (v3)
 
 - **শুরুতে / Starts with**, **মাঝখানে / Contains** (anywhere or an exact position), **শেষে / Ends with** — any combination, up to 8 digits after 016/018, with a live preview (e.g. `016 12__ __77`) and a count of possible numbers.

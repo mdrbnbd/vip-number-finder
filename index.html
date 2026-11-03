@@ -16,7 +16,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
 <div class="app">
@@ -44,12 +44,19 @@
       <li><b>৩</b><span data-t="step3">স্ক্যান করে কিনুন</span></li>
     </ol>
 
+    <div class="mode-seg" id="modeSeg" role="tablist">
+      <button type="button" data-mode="scan" data-t="modeScan">🔍 অনলাইন স্ক্যান</button>
+      <button type="button" data-mode="list" data-t="modeList">📋 নিজের তালিকা</button>
+    </div>
+
     <div class="lbl" data-t="selOp">অপারেটর বাছুন</div>
     <div class="op-big" role="radiogroup" id="opPick">
       <button type="button" class="airtel" data-op="AIRTEL"><b data-t="airtelFull">এয়ারটেল বাংলাদেশ</b><small data-t="airtelCode">(০১৬)</small></button>
       <button type="button" class="robi" data-op="ROBI"><b data-t="robiFull">রবি আজিয়াটা</b><small data-t="robiCode">(০১৮)</small></button>
+      <button type="button" class="both" data-op="BOTH"><b data-t="bothFull">রবি + এয়ারটেল</b><small data-t="bothCode">(০১৮ + ০১৬ একসাথে)</small></button>
     </div>
 
+    <div id="scanPane">
     <div class="lbl" data-t="selCat">কোন ধরনের নাম্বার?</div>
     <div class="cats" id="cats" role="radiogroup"></div>
     <p class="hint" id="catHint"></p>
@@ -79,6 +86,22 @@
       </div>
       <button class="btn primary scan" id="scanBtn" type="submit" data-t="start">স্ক্যান শুরু ▶</button>
     </form>
+    </div>
+
+    <div id="listPane" class="hidden">
+      <label class="lbl" for="vipType" data-t="vipTypeLbl">ভিআইপি প্যাটার্ন</label>
+      <select id="vipType" class="big-select"></select>
+      <label class="lbl" for="listInput" data-t="listLbl">নম্বরের ডেটাবেস (প্রতি লাইনে একটি)</label>
+      <textarea id="listInput" rows="7" data-tp="listPh" spellcheck="false" autocomplete="off"></textarea>
+      <p class="hint" data-t="listHint"></p>
+      <p class="list-info" id="listInfo" aria-live="polite"></p>
+      <div class="list-tools">
+        <label class="chk"><input type="checkbox" id="sampleChk" /><span data-t="sample">নমুনা ডেটা ব্যবহার করুন</span></label>
+        <label class="btn ghost file-btn"><input type="file" id="fileInput" accept=".txt,.csv,text/plain,text/csv" hidden /><span data-t="loadFile">📂 ফাইল (.txt/.csv)</span></label>
+      </div>
+      <label class="chk"><input type="checkbox" id="availChk" /><span data-t="availChk">রবি/এয়ারটেল নম্বর খালি আছে কি না অনলাইনে যাচাই করুন</span></label>
+      <button class="btn scan-now" id="listBtn" type="button" data-t="scanNow">🔍 এখনই স্ক্যান করুন</button>
+    </div>
 
     <div class="progress hidden" id="progressBox" aria-live="polite">
       <div class="prog-line"><span class="spin" id="spin"></span><span id="progText"></span></div>
@@ -97,6 +120,11 @@
     <div class="card-h">
       <h2 id="resTitle"></h2>
       <button class="link-btn hidden" id="backToResults" type="button" data-t="backResults">← ফলাফলে ফিরুন</button>
+    </div>
+    <div class="minscore">
+      <label for="minScore"><span data-t="minScore">সর্বনিম্ন VIP স্কোর</span>: <b id="minScoreVal">৫০</b></label>
+      <input type="range" id="minScore" min="0" max="100" step="5" value="50" />
+      <p class="hint" data-t="starRule"></p>
     </div>
     <div class="filters" id="tierFilter" role="radiogroup">
       <span class="lbl" data-t="liveFilters">লাইভ ফিল্টার:</span>
@@ -178,8 +206,8 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="vip.js?v=3"></script>
-<script src="i18n.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="vip.js?v=4"></script>
+<script src="i18n.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

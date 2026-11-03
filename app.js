@@ -8,7 +8,8 @@
   const CONC_MIN = 2, CONC_START = 5, CONC_MAX = 10; // adaptive pool for Smart Search
   const GAP_MS = 450;         // pause per lane between requests (+ jitter)
   const REQ_TIMEOUT_MS = 15000;
-  const CATS = ['smart', 'triple', 'pairs', 'celebrity', 'years', 'zerobin', 'ends', 'math', 'customd'];
+  const CATS = ['smart', 'allvip', 'triple', 'pairs', 'math', 'mirror', 'celebrity', 'years', 'zerobin', 'ends', 'customd'];
+  const VTYPES = ['all', 'triple', 'pairs', 'seq', 'mirror', 'lucky'];
   const NEEDS_Q = { ends: true, customd: true };
   const $ = (id) => document.getElementById(id);
   const LS = {
@@ -23,7 +24,8 @@
   const N = (x) => (lang === 'bn' ? toBn(x) : String(x));
   const NF = (x) => N(Number(x).toLocaleString('en-US'));
   const opName = (b) => (lang === 'bn' ? OPS[b].short : OPS[b].shortEn);
-  const starOf = (it) => (it.score >= 70 ? 5 : it.score >= 45 ? 4 : 3);
+  const vipOfItem = (it) => (it.vip != null ? it.vip : V.vipOf(it.score));
+  const starOf = (it) => V.starsOf(vipOfItem(it));
   const starName = (s) => T('t' + s);
   function applyLang() {
     document.documentElement.lang = lang;
@@ -33,7 +35,7 @@
     $('langBtn').textContent = lang === 'bn' ? 'EN' : 'বাংলা';
     $('langBtn').title = lang === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন';
     document.title = lang === 'bn' ? 'ভিআইপি নাম্বার ফাইন্ডার — রবি ০১৮ · এয়ারটেল ০১৬' : 'VIP Number Finder — Robi 018 · Airtel 016';
-    setScanBtn(); renderLimit(); renderCats(); renderSeries(); renderAvoid(); updateFavBtn(); prog(); scheduleRender();
+    setScanBtn(); renderLimit(); renderVtypes(); listCounts(); renderCats(); renderSeries(); renderAvoid(); updateFavBtn(); prog(); scheduleRender();
   }
   $('langBtn').onclick = () => { lang = lang === 'bn' ? 'en' : 'bn'; LS.set('vnf-lang', lang); applyLang(); };
 
@@ -46,17 +48,20 @@
 
   /* ---------------- settings ---------------- */
   const S = Object.assign({ op: 'AIRTEL', cat: 'smart', limit: 100, limitN: 100, pat: { start: '', mid: '', end: '', pos: 'any' }, smode: 'smart', manual: { ROBI: ['2', '4', '6', '1'], AIRTEL: ['1'] }, avoid: [], bonus: false, q: {} }, LS.get('vnf-settings-v2', {}));
-  if (!OPS[S.op]) S.op = 'AIRTEL'; if (!CATS.includes(S.cat)) S.cat = 'triple'; if (typeof S.q !== 'object' || !S.q) S.q = {};
+  if (!OPS[S.op] && S.op !== 'BOTH') S.op = 'AIRTEL';
+  if (!['scan', 'list'].includes(S.mode)) S.mode = 'scan'; if (S.minScore == null) S.minScore = 50; if (!VTYPES.includes(S.vtype)) S.vtype = 'all'; if (!CATS.includes(S.cat)) S.cat = 'triple'; if (typeof S.q !== 'object' || !S.q) S.q = {};
   if (!S.v3) { S.cat = 'smart'; S.v3 = 1; } // Smart Search is the new default
   if (!S.pat || typeof S.pat !== 'object') S.pat = { start: '', mid: '', end: '', pos: 'any' };
   const save = () => LS.set('vnf-settings-v2', S);
-  const opsOn = () => ({ ROBI: S.op === 'ROBI', AIRTEL: S.op === 'AIRTEL' });
+  const opsOn = () => ({ ROBI: S.op !== 'AIRTEL', AIRTEL: S.op !== 'ROBI' });
+  const brands = () => (S.op === 'BOTH' ? ['ROBI', 'AIRTEL'] : [S.op]);
+  const codeTxt = () => brands().map((b) => OPS[b].code).join('/');
 
   function setOp(op) {
     if (running) return;
     S.op = op; save();
     document.querySelectorAll('#opPick button').forEach((b) => { const on = b.dataset.op === op; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
-    $('prefix').textContent = '+88' + OPS[op].code;
+    $('prefix').textContent = op === 'BOTH' ? '018/016' : '+88' + OPS[op].code;
     document.body.dataset.op = op;
     renderSeries(); if ($('patBox')) renderPat();
   }
@@ -120,11 +125,11 @@
     let tpl = spec.ok ? V.previewTpl(spec) : (P.start + '________').slice(0, 8);
     if (!spec.ok && c && a + c <= 8) tpl = tpl.slice(0, 8 - c) + P.end;
     const cell = (ch) => (ch === '_' ? '_' : '<em>' + N(ch) + '</em>');
-    $('ppCode').textContent = N(OPS[S.op].code);
+    $('ppCode').textContent = N(codeTxt());
     $('ppDigits').innerHTML = tpl.slice(0, 4).split('').map(cell).join('') + ' ' + tpl.slice(4).split('').map(cell).join('');
     $('patNote').textContent = spec.ok && b && spec.placements.length > 1 ? T('patAnyNote', N(P.mid)) : '';
     const est = $('patEst');
-    if (spec.ok) { est.className = 'hint'; est.textContent = '🔢 ' + T('patEst', NF(spec.total), spec.total <= ENUM_MAX, fmtDur(spec.total / LS.get('vnf-rate', 2.5))); }
+    if (spec.ok) { est.className = 'hint'; est.textContent = '🔢 ' + T('patEst', NF(spec.total * brands().length), spec.total <= ENUM_MAX, fmtDur(spec.total * brands().length / LS.get('vnf-rate', 2.5))); }
     else { est.className = 'hint ' + (spec.error === 'empty' ? '' : 'err'); est.textContent = (spec.error === 'empty' ? '💡 ' : '⚠️ ') + T('patErr')[spec.error]; }
   }
   [['patStart', 'start'], ['patMid', 'mid'], ['patEnd', 'end']].forEach(([id, k]) => {
@@ -167,8 +172,7 @@
     $('seriesSummary').textContent = T('seriesCount', N(seriesList().length));
   }
   function seriesList() {
-    const b = S.op;
-    return (S.smode === 'smart' ? topHeads(b, b === 'ROBI' ? 8 : 6) : S.manual[b]).map((h) => ({ brand: b, head: h }));
+    return brands().flatMap((b) => (S.smode === 'smart' ? topHeads(b, b === 'ROBI' ? 8 : 6) : S.manual[b]).map((h) => ({ brand: b, head: h })));
   }
   function renderAvoid() {
     const box = $('avoidChips'); box.innerHTML = '';
@@ -203,9 +207,10 @@
   function baseItems() { return view.tab === 'favs' ? favs.slice() : [...results.values()]; }
   function currentItems() {
     let arr = baseItems();
+    arr = arr.filter((x) => vipOfItem(x) >= S.minScore);
     if (view.star !== 'all') arr = arr.filter((x) => String(starOf(x)) === view.star);
     if (view.q) arr = arr.filter((x) => V.localOf(x.msisdn).includes(view.q));
-    const cmp = { score: (a, b) => b.score - a.score || a.msisdn.localeCompare(b.msisdn), new: (a, b) => b.at - a.at, num: (a, b) => a.msisdn.localeCompare(b.msisdn) }[view.sort];
+    const cmp = { score: (a, b) => vipOfItem(b) - vipOfItem(a) || b.score - a.score || a.msisdn.localeCompare(b.msisdn), new: (a, b) => b.at - a.at, num: (a, b) => a.msisdn.localeCompare(b.msisdn) }[view.sort];
     return arr.sort(cmp);
   }
   function numHtml(item) {
@@ -228,12 +233,14 @@
     const st = starOf(item);
     const el = document.createElement('div'); el.className = 'item s' + st;
     const top = item.reasons && item.reasons[0] ? reasonText(item.reasons[0]) : item.cat ? T('cats')[item.cat][0] + (item.qq ? ' ' + N(item.qq) : '') : T('regular');
-    el.innerHTML = `<div class="item-top">
-        <span class="badge st s${st}">${'★'.repeat(st)} ${starName(st)}</span>
+    el.innerHTML = `<div class="item-top"><div class="badges">
+        <span class="badge vipsc">VIP ${N(vipOfItem(item))}</span>
+        <span class="badge st s${st}">${st ? '★'.repeat(st) + ' ' : ''}${starName(st)}</span>
         <span class="badge ${item.brand}">${opName(item.brand)}</span>
         ${item.src === 'bonus' ? `<span class="badge bonus">${T('near')}</span>` : ''}
-        ${item.gone ? `<span class="badge gone">${T('gone')}</span>` : ''}
-        <span class="spacer"></span>
+        ${item.src === 'list' && item.avail === true ? `<span class="badge free">${T('freeNow')}</span>` : ''}
+        ${item.gone ? `<span class="badge gone">${item.src === 'list' ? T('notFree') : T('gone')}</span>` : ''}
+        </div>
         <button class="mini" data-a="verify" type="button" aria-label="verify">🔄</button>
         <button class="mini fav ${isFav(item.msisdn) ? 'on' : ''}" data-a="fav" type="button" aria-label="favourite">${isFav(item.msisdn) ? '★' : '☆'}</button>
       </div>
@@ -250,18 +257,21 @@
   function scheduleRender() { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } }
   function render() {
     renderQueued = false; renderBonus();
-    const base = baseItems();
+    const all = baseItems(), base = all.filter((x) => vipOfItem(x) >= S.minScore);
     $('cAll').textContent = N(base.length);
     [5, 4, 3].forEach((s) => ($('c' + s).textContent = N(base.filter((x) => starOf(x) === s).length)));
-    $('resTitle').textContent = view.tab === 'favs' ? T('favsTitle', N(favs.length)) : results.size || searchState !== 'idle' ? T('resTitle', N(results.size)) : T('resTitle0');
+    $('resTitle').textContent = view.tab === 'favs' ? T('favsTitle', N(favs.length)) : all.some((x) => x.src === 'list') ? T('resTitleList', N(base.length), N(all.length)) : results.size || searchState !== 'idle' ? T('resTitle', N(results.size)) : T('resTitle0');
     const list = $('list'); const items = currentItems(); list.innerHTML = '';
     if (!items.length) {
-      const html = view.tab === 'favs' ? T('emptyFavs') : results.size ? T('emptyFilter') : { idle: T('emptyIdle'), running: T('emptyRunning'), done: T('emptyNone') }[searchState];
+      const hid = all.length - base.length;
+      const html = view.tab === 'favs' && !favs.length ? T('emptyFavs') : hid && view.star === 'all' ? '🔽 ' + T('emptyMin', N(hid)) : all.length ? T('emptyFilter') : { idle: T('emptyIdle'), running: T('emptyRunning'), done: T('emptyNone') }[searchState];
       list.innerHTML = `<div class="empty ${searchState}">${html}</div>`;
       return;
     }
     const frag = document.createDocumentFragment();
     items.slice(0, 500).forEach((it) => frag.appendChild(card(it)));
+    const hid = all.length - base.length;
+    if (hid) { const p = document.createElement('p'); p.className = 'hint hidden-note'; p.textContent = '🔽 ' + T('emptyMin', N(hid)); frag.appendChild(p); }
     list.appendChild(frag);
   }
   function renderBonus() {
@@ -269,7 +279,7 @@
     $('bonusTitle').textContent = T('bonusTitle', N(bonus.size));
     const list = $('bonusList'); list.innerHTML = '';
     const frag = document.createDocumentFragment();
-    [...bonus.values()].sort((a, b) => b.score - a.score).slice(0, 60).forEach((it) => frag.appendChild(card(it)));
+    [...bonus.values()].filter((x) => vipOfItem(x) >= S.minScore).sort((a, b) => vipOfItem(b) - vipOfItem(a)).slice(0, 60).forEach((it) => frag.appendChild(card(it)));
     list.appendChild(frag);
   }
 
@@ -305,7 +315,7 @@
     const st = starOf(item);
     $('whyTitle').innerHTML = numHtml(item);
     const rows = (item.reasons || []).map((r) => `<div class="why-row"><span>${esc(reasonText(r))}</span><b>+${N(r.p)}</b></div>`).join('') || `<p class="muted">${T('whyNone')}</p>`;
-    $('whyContent').innerHTML = rows + `<div class="why-total"><span>${T('whyTotal')}</span><span>${N(item.score)} · ${'★'.repeat(st)} ${starName(st)}</span></div>
+    $('whyContent').innerHTML = rows + `<div class="why-total"><span>${T('whyTotal')}</span><span>${N(vipOfItem(item))} · ${st ? '★'.repeat(st) + ' ' : ''}${starName(st)}</span></div>
       <p class="hint">${T('whyTiers')}</p>
       <div class="acts2"><button class="btn ghost" id="whyShare" type="button">📤</button><button class="btn buy" id="whyBuy" type="button">${T('buy')}</button></div>`;
     $('whyShare').onclick = () => actions.share(item); $('whyBuy').onclick = () => actions.buy(item);
@@ -318,7 +328,7 @@
   $('txtBtn').onclick = async () => {
     const it = currentItems(); if (!it.length) return toast(T('tNothing'));
     const stamp = new Date().toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB');
-    const lines = [`${T('txtHead')} — ${stamp}`, ''].concat(it.map((x) => `${V.localOf(x.msisdn)}  ${'★'.repeat(starOf(x))} ${starName(starOf(x))}  ${opName(x.brand)}`));
+    const lines = [`${T('txtHead')} — ${stamp}`, ''].concat(it.map((x) => `${V.localOf(x.msisdn)}  VIP ${vipOfItem(x)}  ${'★'.repeat(starOf(x))} ${starName(starOf(x))}  ${opName(x.brand)}`));
     const ops = [...new Set(it.map((x) => x.brand))]; lines.push('', ...ops.map((b) => `${T('txtBuy')} ${opName(b)}: ${OPS[b].buy}`));
     const text = lines.join('\n');
     download('vip-numbers.txt', '\ufeff' + text, 'text/plain;charset=utf-8'); await copyText(text);
@@ -327,7 +337,7 @@
   $('copyAllBtn').onclick = async () => { const it = currentItems(); if (!it.length) return toast(T('tNothing')); toast((await copyText(it.map((x) => V.localOf(x.msisdn)).join('\n'))) ? T('tCount', N(it.length)) : T('tCopyFail')); };
   $('csvBtn').onclick = () => {
     const it = currentItems(); if (!it.length) return toast(T('tNothing'));
-    const rows = [['number', 'operator', 'score', 'stars', 'why', 'buy_url']].concat(it.map((x) => [V.localOf(x.msisdn), x.brand, x.score, starOf(x), (x.reasons || []).map(reasonText).join('; '), OPS[x.brand].buy]));
+    const rows = [['number', 'operator', 'vip_score', 'stars', 'why', 'buy_url']].concat(it.map((x) => [V.localOf(x.msisdn), x.brand, vipOfItem(x), starOf(x), (x.reasons || []).map(reasonText).join('; '), OPS[x.brand].buy]));
     download('vip-numbers.csv', '\ufeff' + rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n'), 'text/csv;charset=utf-8');
   };
 
@@ -360,7 +370,7 @@
   let running = false, stats = null;
   const triedLS = LS.get('vnf-tried-v1', {});
   (function prune() { const cut = Date.now() - 12 * 3600e3; for (const k in triedLS) if (triedLS[k] < cut) delete triedLS[k]; })();
-  function setScanBtn() { const b = $('scanBtn'); b.textContent = T(running ? 'stopScan' : 'start'); b.classList.toggle('stop', running); }
+  function setScanBtn() { const b = $('scanBtn'); b.textContent = T(running ? 'stopScan' : 'start'); b.classList.toggle('stop', running); const l = $('listBtn'); l.textContent = T(running ? 'stopScan' : 'scanNow'); l.classList.toggle('stop', running); }
   function prog() {
     if (!stats) return;
     const { checked, found, limit, t0, cap, ended, stopped, total } = stats;
@@ -369,13 +379,13 @@
     $('sChecked').textContent = NF(checked); $('sFound').textContent = NF(found); $('sTotal').textContent = NF(tot);
     $('sEta').textContent = ended ? '✓' : rate > 0.05 && checked > 3 ? fmtDur(Math.max(0, tot - checked) / rate) : '…';
     const rateTxt = rate ? ` · ${N(rate.toFixed(1))}/s` : '';
-    $('progText').textContent = !ended ? (slowNote ? T('slow') : '') + (total ? T('progPat', NF(checked), NF(total), NF(found)) : T('prog', N(checked), N(found), lim)) + rateTxt : stopped ? T('progStopped', N(checked), N(found)) : T('progDone', N(checked), N(found));
+    $('progText').textContent = !ended ? (slowNote ? T('slow') : '') + (stats.avail ? T('progAvail', NF(checked), NF(total), NF(found)) : total ? T('progPat', NF(checked), NF(total), NF(found)) : T('prog', N(checked), N(found), lim)) + rateTxt : stopped ? T('progStopped', N(checked), N(found)) : T('progDone', N(checked), N(found));
     $('spin').classList.toggle('hidden', !!ended);
     $('bar').style.width = (ended ? 100 : Math.min(100, Math.max(isFinite(limit) ? found / limit : 0, checked / tot) * 100)) + '%';
   }
   function addResult(msisdn, src, extra) {
     if (results.has(msisdn)) return false;
-    const item = { msisdn, brand: V.brandOf(msisdn), sub: V.subOf(msisdn), ...V.score(msisdn), src, at: Date.now(), cat: src === 'bonus' ? null : S.cat, qq: src === 'bonus' ? '' : S.q[S.cat] || '' };
+    const item = { msisdn, brand: V.brandOf(msisdn), sub: V.subOf(msisdn), ...V.score(msisdn, extra && extra.want ? { want: extra.want } : null), src, at: Date.now(), cat: src === 'bonus' ? null : S.cat, qq: src === 'bonus' ? '' : S.q[S.cat] || '' };
     if (extra && extra.mask) { item.mask = extra.mask; item.qq = extra.label; }
     results.set(msisdn, item); bonus.delete(msisdn); scheduleRender(); return true;
   }
@@ -384,8 +394,8 @@
     bonus.set(msisdn, { msisdn, brand: V.brandOf(msisdn), sub: V.subOf(msisdn), ...V.score(msisdn), src: 'bonus', at: Date.now() });
     scheduleRender();
   }
-  function beginUI() {
-    running = true; stopCtrl = new AbortController(); searchState = 'running'; results.clear(); bonus.clear(); view.tab = 'found';
+  function beginUI(keep) {
+    running = true; stopCtrl = new AbortController(); searchState = 'running'; if (!keep) { results.clear(); bonus.clear(); } view.tab = 'found';
     $('backToResults').classList.add('hidden'); $('progressBox').classList.remove('hidden');
     document.body.classList.add('scanning'); setScanBtn(); scheduleRender();
   }
@@ -395,12 +405,17 @@
   }
 
   async function checkOne(sub) {
-    const brand = S.op, msisdn = OPS[brand].intl + sub;
-    beginUI(); stats = { checked: 0, found: 0, limit: 1, cap: 1, t0: Date.now() }; prog();
+    const bs = brands();
+    beginUI(); stats = { checked: 0, found: 0, limit: bs.length, cap: bs.length, t0: Date.now() }; prog();
     try {
-      const d = await callApi(msisdn, brand); stats.checked = 1;
-      if (d.available === true) { addResult(msisdn, 'check'); stats.found = 1; toast(T('tOneFree')); } else toast(T('tOneTaken'));
-      for (const n of d.freeMsisdnList || []) { const s = String(n); if (/^880(18|16)\d{8}$/.test(s) && V.brandOf(s) === brand) { learnHead(s); addResult(s, 'bonus'); } }
+      for (const brand of bs) {
+        const msisdn = OPS[brand].intl + sub;
+        const d = await callApi(msisdn, brand); stats.checked++;
+        if (d.available === true) { addResult(msisdn, 'check'); stats.found++; }
+        for (const n of d.freeMsisdnList || []) { const s = String(n); if (/^880(18|16)\d{8}$/.test(s) && V.brandOf(s) === brand) { learnHead(s); addResult(s, 'bonus'); } }
+        prog();
+      }
+      toast(T(stats.found ? 'tOneFree' : 'tOneTaken'));
     } catch (e) { if (e.name !== 'AbortError') toast(T('tNet', e.message)); }
     stats.ended = true; stats.stopped = false; endUI(); prog();
   }
@@ -409,39 +424,42 @@
     const spec = V.patternSpec(S.pat);
     if (!spec.ok) { toast(T('patErr')[spec.error]); $(spec.error === 'pos' ? 'patPos' : 'patStart').focus(); return; }
     if (spec.total === 1) return checkOne(spec.templates[0]);
-    const brand = S.op, code = OPS[brand].code.slice(1), intl = OPS[brand].intl;
-    const hs = topHeads(brand, 10).filter((h) => heads[brand][h].n > 0);
-    const src = V.patternSource(spec, { code, heads: hs, enumMax: ENUM_MAX });
+    const want = [spec.start, spec.mid, spec.end].filter(Boolean);
+    const lanesB = brands().map((brand) => ({ brand, intl: OPS[brand].intl, buf: [], done: false,
+      src: V.patternSource(spec, { code: OPS[brand].code.slice(1), heads: topHeads(brand, 10).filter((h) => heads[brand][h].n > 0), enumMax: ENUM_MAX }) }));
+    const src = { total: lanesB.reduce((a, l) => a + l.src.total, 0) };
+    let rr = 0;
     const label = V.previewTpl(spec).replace(/_+/g, '…');
     const limit = S.limit || Infinity;
     beginUI();
     stats = { checked: 0, found: 0, limit, cap: src.total, total: src.total, t0: Date.now() }; prog();
     let conc = CONC_START, okStreak = 0, consecErr = 0, active = 0, netErr = null, exhausted = false, seenT = throttleEvents;
-    const buf = [];
     const take = () => {
       for (;;) {
-        if (!buf.length) { const b = src.next(200); if (!b.length) { exhausted = true; return null; } buf.push(...b); }
-        const sub = buf.shift(), m = intl + sub;
-        if (results.has(m) || triedLS[brand + '|' + sub]) { stats.checked++; continue; } // already known: free (found) or taken (last 12h)
-        return { m, sub };
+        const live = lanesB.filter((l) => !l.done); if (!live.length) { exhausted = true; return null; }
+        const L = live[rr++ % live.length]; // alternate operators
+        if (!L.buf.length) { const b = L.src.next(200); if (!b.length) { L.done = true; continue; } L.buf.push(...b); }
+        const sub = L.buf.shift(), m = L.intl + sub;
+        if (results.has(m) || triedLS[L.brand + '|' + sub]) { stats.checked++; continue; } // already known: free (found) or taken (last 12h)
+        return { m, sub, brand: L.brand };
       }
     };
     const extraHit = (d) => {
       for (const n of d.freeMsisdnList || []) {
         const s = String(n); if (!/^880(18|16)\d{8}$/.test(s)) continue;
         learnHead(s);
-        if (V.brandOf(s) !== brand) continue;
+        if (!brands().includes(V.brandOf(s))) continue;
         const sub = V.subOf(s);
-        if (V.matchSpec(sub, spec)) { if (stats.found < limit && addResult(s, 'check', { mask: fixedMask(spec, sub), label })) stats.found++; }
-        else if (V.score(s).score >= 22) addBonus(s);
+        if (V.matchSpec(sub, spec)) { if (stats.found < limit && addResult(s, 'check', { mask: fixedMask(spec, sub), label, want })) stats.found++; }
+        else if (V.score(s).vip >= 50) addBonus(s);
       }
     };
     const run = async (c) => {
       try {
-        const d = await callApi(c.m, brand);
+        const d = await callApi(c.m, c.brand);
         stats.checked++; consecErr = 0;
-        if (d.available === true) { if (addResult(c.m, 'check', { mask: fixedMask(spec, c.sub), label })) { stats.found++; learnHead(c.m); } }
-        else triedLS[brand + '|' + c.sub] = Date.now();
+        if (d.available === true) { if (addResult(c.m, 'check', { mask: fixedMask(spec, c.sub), label, want })) { stats.found++; learnHead(c.m); } }
+        else triedLS[c.brand + '|' + c.sub] = Date.now();
         extraHit(d);
         if (++okStreak >= 12 && conc < CONC_MAX && !backoff) { conc++; okStreak = 0; }
       } catch (e) {
@@ -482,13 +500,14 @@
     if (isPattern) {
       const p = V.parsePattern(q); if (!p.ok) return toast(p.error);
       const lead2 = (p.tokens.join('').match(/^\d{2}/) || [''])[0];
-      if (lead2) series = [{ brand: S.op, head: lead2 }];
+      if (lead2) series = brands().map((b) => ({ brand: b, head: lead2 }));
     } else if ((cat === 'ends' || cat === 'customd') && q.length > 6) {
       // long input (7 digits): only 1 free digit before it, so scan by 1-digit series heads
-      series = [...new Set(series.map((s) => s.head[0]))].map((h) => ({ brand: S.op, head: h }));
+      series = [...new Set(series.map((s) => s.brand + s.head[0]))].map((x) => ({ brand: x.slice(0, -1), head: x.slice(-1) }));
     }
     if (!series.length) { toast(T('selOp')); return; }
     const filters = { avoid: S.avoid, must: '' };
+    const qWant = q && /^\d+$/.test(q) && (cat === 'ends' || cat === 'customd') ? { want: [q] } : null;
     const limit = S.limit || Infinity, cap = S.limit ? Math.min(3000, Math.max(300, limit * 25)) : 20000;
     beginUI();
     stats = { checked: 0, found: 0, limit, cap, t0: Date.now() }; prog();
@@ -511,15 +530,15 @@
         try {
           const d = await callApi(c.msisdn, c.brand);
           stats.checked++; consecErr = 0;
-          if (d.available === true) { if (addResult(c.msisdn, 'check')) { stats.found++; learnHead(c.msisdn); } }
+          if (d.available === true) { if (addResult(c.msisdn, 'check', qWant)) { stats.found++; learnHead(c.msisdn); } }
           else triedLS[c.brand + '|' + c.sub] = Date.now();
           for (const n of d.freeMsisdnList || []) {
             const s = String(n); if (!/^880(18|16)\d{8}$/.test(s)) continue;
             learnHead(s);
-            if (V.brandOf(s) !== S.op || stats.found >= limit) continue;
-            const sub = V.subOf(s), code = OPS[S.op].code.slice(1);
-            if (P.test(sub, code) && V.passFilters(sub, filters)) { if (addResult(s, 'check')) stats.found++; }
-            else if (V.score(s).score >= 22 && V.passFilters(sub, filters)) addBonus(s);
+            if (!brands().includes(V.brandOf(s)) || stats.found >= limit) continue;
+            const sub = V.subOf(s), code = OPS[V.brandOf(s)].code.slice(1);
+            if (P.test(sub, code) && V.passFilters(sub, filters)) { if (addResult(s, 'check', qWant)) stats.found++; }
+            else if (V.score(s).vip >= 50 && V.passFilters(sub, filters)) addBonus(s);
           }
         } catch (e) {
           if (e.name === 'AbortError') break;
@@ -541,13 +560,100 @@
   function stopScan() { if (stopCtrl) { stopCtrl.abort(); running = false; setScanBtn(); } }
   $('scanForm').onsubmit = (e) => { e.preventDefault(); $('qInput').blur(); running ? stopScan() : startScan(); };
 
+  /* ---------------- mode switch ---------------- */
+  function renderMode() {
+    document.querySelectorAll('#modeSeg button').forEach((b) => { const on = b.dataset.mode === S.mode; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    $('scanPane').classList.toggle('hidden', S.mode !== 'scan'); $('listPane').classList.toggle('hidden', S.mode !== 'list');
+    document.body.dataset.mode = S.mode;
+  }
+  document.querySelectorAll('#modeSeg button').forEach((b) => (b.onclick = () => { if (running) return; S.mode = b.dataset.mode; save(); renderMode(); }));
+
+  /* ---------------- minimum VIP score slider ---------------- */
+  function renderMin() { $('minScore').value = S.minScore; $('minScoreVal').textContent = N(S.minScore); }
+  $('minScore').oninput = () => { S.minScore = +$('minScore').value; renderMin(); scheduleRender(); };
+  $('minScore').onchange = () => save();
+
+  /* ---------------- list mode: score my own numbers ---------------- */
+  const SAMPLE = ['01817777777', '01818888899', '01811234567', '01817656765', '01617778899', '01619999123', '01616161616', '01819876543', '01620241971', '01614200420', '01815372946', '01612121212'];
+  let listText = LS.get('vnf-list', ''), stash = null;
+  function renderVtypes() { $('vipType').innerHTML = VTYPES.map((k) => `<option value="${k}"${S.vtype === k ? ' selected' : ''}>${esc(T('vt')[k])}</option>`).join(''); }
+  $('vipType').onchange = () => { S.vtype = $('vipType').value; save(); };
+  function listCounts() {
+    const L = V.parseList($('listInput').value), bs = brands();
+    const mine = L.items.filter((n) => bs.includes(V.opOfLocal(n)));
+    $('listInfo').innerHTML = $('listInput').value.trim() ? T('listInfo', N(mine.length), L.invalid && N(L.invalid), L.dups && N(L.dups), (L.items.length - mine.length) && N(L.items.length - mine.length)) : '';
+    return { L, mine };
+  }
+  $('listInput').value = listText;
+  $('listInput').oninput = () => { if (!$('sampleChk').checked) { listText = $('listInput').value; if (listText.length < 200000) LS.set('vnf-list', listText); } listCounts(); };
+  $('sampleChk').onchange = () => {
+    if ($('sampleChk').checked) { stash = $('listInput').value; $('listInput').value = SAMPLE.join('\n'); }
+    else $('listInput').value = stash != null ? stash : listText;
+    listCounts();
+  };
+  $('fileInput').onchange = () => {
+    const f = $('fileInput').files[0]; if (!f) return;
+    if (f.size > 5e6) { toast('⚠️ > 5 MB'); return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const txt = String(rd.result || ''); const n = V.parseList(txt).items.length;
+      $('sampleChk').checked = false;
+      $('listInput').value = ($('listInput').value.trim() ? $('listInput').value.trim() + '\n' : '') + txt;
+      $('listInput').oninput(); toast(T('tFile', N(n))); $('fileInput').value = '';
+    };
+    rd.readAsText(f);
+  };
+  async function runList() {
+    if (running) return stopScan();
+    const { L, mine } = listCounts();
+    if (!mine.length) { toast(T('tListEmpty')); $('listInput').focus(); return; }
+    results.clear(); bonus.clear(); view.tab = 'found';
+    const vt = S.vtype; let n = 0;
+    for (const local of mine) {
+      const sub = local.slice(3);
+      if (vt !== 'all' && !V.vipTypes(sub).includes(vt)) continue;
+      const msisdn = '880' + local.slice(1);
+      results.set(msisdn, { msisdn, brand: V.opOfLocal(local), sub, ...V.score(msisdn), src: 'list', at: Date.now(), cat: null, qq: '' });
+      n++;
+    }
+    searchState = 'done'; $('progressBox').classList.add('hidden'); scheduleRender();
+    toast(T('tListDone', N(n), N(mine.length)));
+    $('resultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if ($('availChk').checked && n) await checkListAvail();
+  }
+  async function checkListAvail() {
+    const items = [...results.values()].filter((x) => vipOfItem(x) >= S.minScore && OPS[x.brand]).sort((a, b) => vipOfItem(b) - vipOfItem(a));
+    if (!items.length) return;
+    beginUI(true); $('progressBox').classList.remove('hidden');
+    stats = { checked: 0, found: 0, limit: Infinity, cap: items.length, total: items.length, t0: Date.now(), avail: true }; prog();
+    let i = 0, consecErr = 0, netErr = null;
+    const lane = async () => {
+      while (running && i < items.length) {
+        const it = items[i++];
+        try {
+          const d = await callApi(it.msisdn, it.brand);
+          consecErr = 0; it.avail = d.available === true; it.gone = !it.avail; if (it.avail) stats.found++;
+          for (const x of d.freeMsisdnList || []) { const s = String(x); if (/^880(18|16)\d{8}$/.test(s)) { learnHead(s); if (V.score(s).vip >= 50) addBonus(s); } }
+        } catch (e) { if (e.name === 'AbortError') break; consecErr++; if (consecErr >= 8) { netErr = e.message; running = false; } }
+        stats.checked++; prog(); scheduleRender();
+        if (running) await sleep(GAP_MS + Math.random() * 250);
+      }
+    };
+    try { await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, (_, k) => sleep(k * 180).then(lane))); }
+    finally {
+      stats.stopped = !!(stopCtrl && stopCtrl.signal.aborted); stats.ended = true; endUI(); prog();
+      if (netErr) toast(T('tNet', netErr)); else if (!stats.stopped) toast(stats.found ? T('tFound', N(stats.found)) : T('tAvailNone'));
+    }
+  }
+  $('listBtn').onclick = runList;
+
   /* ---------------- PWA ---------------- */
   let deferred = null;
   addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; $('installBtn').classList.remove('hidden'); });
   $('installBtn').onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $('installBtn').classList.add('hidden'); };
   if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
-  window.VNF = { addResult, showWhy, results, bonus, S, renderPat, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
+  window.VNF = { addResult, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
   $('qInput').value = S.q[S.cat] || '';
-  setOp(S.op); renderLimit(); applyLang();
+  setOp(S.op); renderLimit(); renderMode(); renderMin(); applyLang();
 })();

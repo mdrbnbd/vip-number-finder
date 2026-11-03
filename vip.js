@@ -97,14 +97,82 @@
     if (s.startsWith(code + code)) add(12, `অপারেটর কোড ${toBn(code)} এর সাথে মিল`, `Matches operator code ${code}`);
     else if (s.endsWith(code + code)) add(8, `শেষে অপারেটর কোড ${toBn(code + code)}`, `Operator code ${code + code} at the end`);
 
+    // tail mirror of 5–7 digits (e.g. …7656765) when no bigger mirror was scored
+    if (lr < 8 && s !== rev(s) && l6 !== rev(l6)) {
+      for (const k of [7, 5]) { const t = s.slice(-k); if (t === rev(t) && trailingRun(t) < k) { add(k === 7 ? 18 : 12, `শেষ ${toBn(k)} অংক আয়না (${toBn(t)})`, `Last ${k} digits mirrored (${t})`); break; } }
+    }
+    // lucky / special endings
+    if (/(1971|1952)$/.test(s)) add(20, `ঐতিহাসিক সাল (${toBn(s.slice(-4))})`, `Historic year (${s.slice(-4)})`);
+    else if (/20(2[4-9]|30)$/.test(s)) add(10, `সাল ${toBn(s.slice(-4))}`, `Year ${s.slice(-4)}`);
+    if (s.endsWith('007') && tr < 3) add(12, 'শেষে ০০৭', 'Ends in 007');
+    else if (s.endsWith('143')) add(8, 'শেষে ১৪৩ (ভালোবাসা)', 'Ends in 143 (love)');
+    if (tr < 3 && /000/.test(s.slice(0, -1))) add(6, 'মাঝে ০০০', '000 in the middle');
+    if (s.includes('420') || full.includes('420')) add(-12, '৪২০ আছে (অনেকে এড়িয়ে চলেন)', 'Contains 420 (many avoid it)');
+    if (extra && extra.want && extra.want.length) {
+      const w = extra.want.find((x) => x && s.includes(x));
+      if (w) add(10, `আপনার চাওয়া সংখ্যা (${toBn(w)})`, `Your digits (${w})`);
+    }
+
     if (extra && extra.bday && extra.bday.length) {
       const hit = extra.bday.find((t) => (t.length === 8 ? s === t : s.endsWith(t)));
       if (hit) add(hit.length >= 6 ? 30 : 18, `আপনার বিশেষ তারিখ (${toBn(hit)})`, `Your special date (${hit})`);
     }
-    pts = Math.min(100, pts);
+    pts = Math.max(0, Math.min(100, pts));
     reasons.sort((a, b) => b.p - a.p);
-    return { score: pts, tier: tierOf(pts), reasons };
+    return { score: pts, vip: vipOf(pts), tier: tierOf(pts), reasons };
   }
+
+  /* VIP score 0–100 shown to users (calibrated from the raw beauty points):
+     a plain triple ending ≈ 50, four same / ABABAB ≈ 70–75, five same / long runs ≥ 85.
+     Stars: 5★ Elite ≥ 85 · 4★ Premium ≥ 70 · 3★ Regular VIP ≥ 50 · below 50 = normal number. */
+  const VIP_CURVE = [[0, 0], [10, 50], [28, 70], [44, 85], [100, 100]];
+  function vipOf(raw) {
+    raw = Math.max(0, Math.min(100, +raw || 0));
+    for (let i = 1; i < VIP_CURVE.length; i++) {
+      const [x0, y0] = VIP_CURVE[i - 1], [x1, y1] = VIP_CURVE[i];
+      if (raw <= x1) return Math.round(y0 + (raw - x0) * (y1 - y0) / (x1 - x0));
+    }
+    return 100;
+  }
+  const starsOf = (vip) => (vip >= 85 ? 5 : vip >= 70 ? 4 : vip >= 50 ? 3 : 0);
+
+  /* VIP pattern classes (for the list scanner filter and the "All VIP" type) */
+  const LUCKY_END = /(786|1971|1952|202[4-9]|2030|007|143)$/;
+  function vipTypes(sub) {
+    const s = subOf(sub), out = [];
+    const lr = longestRun(s);
+    if (lr >= 3) out.push('triple');
+    if (/(\d)\1(?!\1)(\d)\2/.test(s) || /(\d)(?!\1)(\d)\1\2/.test(s)) out.push('pairs');
+    if (Math.max(longestSeq(s, 'asc'), longestSeq(s, 'desc')) >= 4 || trailingSeq(s, 'asc') >= 3 || trailingSeq(s, 'desc') >= 3) out.push('seq');
+    if (lr < 8 && (s === rev(s) || [7, 6, 5].some((k) => { const t = s.slice(-k); return t === rev(t) && trailingRun(t) < k; }))) out.push('mirror');
+    if (!s.includes('420') && (s.includes('786') || LUCKY_END.test(s) || /000/.test(s))) out.push('lucky');
+    return out;
+  }
+
+  /* Parse a pasted list / .txt / .csv into BD mobile numbers (01XXXXXXXXX). Accepts +880 / 880 / 88 prefixes,
+     10-digit numbers without the leading 0, Bangla digits, spaces and dashes. */
+  const BD_OPS = { '016': 'AIRTEL', '018': 'ROBI', '017': 'GP', '013': 'GP', '019': 'BL', '014': 'BL', '015': 'TT' };
+  function normBD(tok) {
+    let t = toEn(String(tok)).replace(/[\s\-().'"]/g, '');
+    if (!/\d/.test(t)) return undefined;
+    t = t.replace(/^\+/, '');
+    if (/^880\d{10}$/.test(t)) t = '0' + t.slice(3);
+    else if (/^88\d{11}$/.test(t)) t = t.slice(2);
+    else if (/^1[3-9]\d{8}$/.test(t)) t = '0' + t;
+    return /^01[3-9]\d{8}$/.test(t) ? t : null;
+  }
+  function parseList(text) {
+    const seen = new Set(), items = []; let invalid = 0, dups = 0;
+    for (const tok of String(text || '').split(/[\r\n,;\t|]+/)) {
+      const n = normBD(tok);
+      if (n === undefined) continue;
+      if (n === null) { invalid++; continue; }
+      if (seen.has(n)) { dups++; continue; }
+      seen.add(n); items.push(n);
+    }
+    return { items, invalid, dups };
+  }
+  const opOfLocal = (l) => BD_OPS[String(l).slice(0, 3)] || null;
 
   const TIERS = {
     diamond: { min: 70, label: 'ডায়মন্ড', en: 'Diamond', icon: '💎' },
@@ -248,7 +316,7 @@
     /* ---- v2 scan categories ---- */
     const qd = q.replace(/\D/g, '');
     const one = qd.length === 1 ? qd : null;           // optional fixed digit
-    const CELEB = ['786', '786786', '1971', '1952', '007', '0007', '143', '1000', '2026', '0786'];
+    const CELEB = ['786', '786786', '1971', '1952', '007', '0007', '143', '1000', '2024', '2025', '2026', '0786'];
     const YEAR_RE = /(19[5-9]\d|20[0-2]\d)$/;
     const fixedYear = /^(19|20)\d\d$/.test(qd) ? qd : null;
     const ar4 = (t) => { const d = t.split('').map(Number), k = d[1] - d[0]; return [1, -1, 2, -2].includes(k) && d[2] - d[1] === k && d[3] - d[2] === k; };
@@ -263,7 +331,7 @@
         gen: (r, h, al) => { const [a, b] = pair(r, one ? [one, ...al.filter((x) => x !== one)] : al); const x = one || a; const y = b === x ? (x === '9' ? '0' : String(+x + 1)) : b; return withTail(r, h, r() < 0.5 ? x + x + y + y : x + y + x + y, al); }
       },
       celebrity: {
-        test: (s) => CELEB.some((c) => s.endsWith(c)) || (s.slice(0, 4) === s.slice(4)),
+        test: (s) => !s.includes('420') && (CELEB.some((c) => s.endsWith(c)) || (s.slice(0, 4) === s.slice(4))),
         gen: (r, h, al) => { if (r() < 0.2) { const x = lead(r, h, 4, al); return x + x; } return withTail(r, h, CELEB[R(r, CELEB.length)], al); }
       },
       years: {
@@ -286,6 +354,12 @@
         test: (s) => matchTokens(s, cpat.tokens), gen: (r, h, al) => genFromTokens(r, h, cpat.tokens, al), opHint: cpat.opHint
       } : P.query
     });
+    // "All VIP types": any of triple / pairs / sequence / mirror / lucky
+    P.allvip = {
+      keys: ['triple', 'pairs', 'math', 'mirror', 'celebrity'],
+      test: (s) => vipTypes(s).length > 0 && vipOf(score('88018' + s).score) >= 50,
+      gen(r, h, al, code) { return P[this.keys[R(r, this.keys.length)]].gen(r, h, al, code); }
+    };
     P.mix = {
       label: 'সেরা মিক্স (সব ভিআইপি)',
       keys: ['rep4', 'rep5', 'zero', 'asc', 'desc', 'mirror', 'abab', 'aabb', 'double', 'lucky786', 'opcode'],
@@ -480,6 +554,6 @@
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
   return { OPS, TIERS, TIER_RANK, toBn, toEn, subOf, localOf, brandOf, pretty, score, tierOf, parsePattern, matchTokens,
-    passFilters, makePresets, bdayStrings, buildBatch, mulberry32, trailingRun, trailingSeq,
+    passFilters, makePresets, bdayStrings, buildBatch, mulberry32, trailingRun, trailingSeq, vipOf, starsOf, vipTypes, normBD, parseList, opOfLocal, BD_OPS,
     patternSpec, matchSpec, unionCount, fillTpl, vipFills, patternSource, previewTpl };
 });
