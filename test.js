@@ -20,3 +20,25 @@ for (const k of ['rep4', 'asc', 'desc', 'mirror', 'abab', 'aabb', 'zero', 'lucky
   for (let i = 1; i < b.length; i++) assert.ok(b[i - 1].score >= b[i].score, 'sorted');
 }
 console.log('all tests passed');
+{ // simple query preset
+  const Q = V.makePresets({ query: '777' });
+  const b = V.buildBatch({ preset: 'query', presets: Q, seriesList: [{ brand: 'ROBI', head: '25' }, { brand: 'AIRTEL', head: '12' }], size: 40, seen: new Set(), filters: {} });
+  assert.ok(b.length > 10, 'query batch');
+  b.forEach((x) => { assert.ok(x.sub.includes('777') && /^(25|12)/.test(x.sub), 'query ' + x.sub); });
+  assert.ok(V.score('8801812345678').reasons[0].en, 'english reasons');
+  console.log('query tests passed');
+}
+{ // v2 scan categories
+  const series = [{ brand: 'ROBI', head: '25' }, { brand: 'AIRTEL', head: '12' }];
+  const cases = { triple: {}, pairs: {}, celebrity: {}, years: {}, zerobin: {}, math: {}, ends: { query: '77' }, customd: { query: '19' } };
+  for (const k in cases) {
+    const Q = V.makePresets(cases[k]);
+    const b = V.buildBatch({ preset: k, presets: Q, seriesList: series, size: 40, seen: new Set(), filters: {} });
+    assert.ok(b.length >= 10, k + ' batch ' + b.length);
+    b.forEach((x) => assert.ok(Q[k].test(x.sub, '18'), k + ' ' + x.sub));
+  }
+  const C = V.makePresets({ pattern: '****ABAB' });
+  const cb = V.buildBatch({ preset: 'customd', presets: C, seriesList: series, size: 20, seen: new Set(), filters: {} });
+  assert.ok(cb.length > 5 && cb.every((x) => /(\d)(\d)\1\2$/.test(x.sub)), 'custom pattern');
+  console.log('category tests passed');
+}

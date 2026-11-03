@@ -7,8 +7,8 @@
   'use strict';
 
   const OPS = {
-    ROBI:   { code: '018', intl: '88018', label: 'রবি', short: 'রবি ০১৮', buy: 'https://www.robi.com.bd/bn/sim-services?requestType=NEW' },
-    AIRTEL: { code: '016', intl: '88016', label: 'এয়ারটেল', short: 'এয়ারটেল ০১৬', buy: 'https://cirkle.digital/bn/sim-services?requestType=NEW' }
+    ROBI:   { code: '018', intl: '88018', label: 'রবি', en: 'Robi', short: 'রবি ০১৮', shortEn: 'Robi 018', buy: 'https://www.robi.com.bd/bn/sim-services?requestType=NEW' },
+    AIRTEL: { code: '016', intl: '88016', label: 'এয়ারটেল', en: 'Airtel', short: 'এয়ারটেল ০১৬', shortEn: 'Airtel 016', buy: 'https://cirkle.digital/bn/sim-services?requestType=NEW' }
   };
 
   const BN = '০১২৩৪৫৬৭৮৯';
@@ -44,62 +44,62 @@
     const full = String(msisdn).slice(-10); // e.g. 1812345678
     const reasons = [];
     let pts = 0;
-    const add = (p, why) => { pts += p; reasons.push({ p, why }); };
+    const add = (p, why, en) => { pts += p; reasons.push({ p, why, en: en || why }); };
 
     // identical digits
     const tr = trailingRun(s), lr = longestRun(s);
     const runPts = { 3: 10, 4: 28, 5: 44, 6: 62, 7: 76, 8: 90 };
-    if (tr >= 3) add(runPts[tr], `শেষে ${toBn(tr)}টি একই সংখ্যা (${toBn(s.slice(-tr))})`);
-    else if (lr >= 4) add(Math.round(runPts[lr] * 0.6), `মাঝে ${toBn(lr)}টি একই সংখ্যা`);
+    if (tr >= 3) add(runPts[tr], `শেষে ${toBn(tr)}টি একই সংখ্যা (${toBn(s.slice(-tr))})`, `${tr} same digits at the end (${s.slice(-tr)})`);
+    else if (lr >= 4) add(Math.round(runPts[lr] * 0.6), `মাঝে ${toBn(lr)}টি একই সংখ্যা`, `${lr} same digits in the middle`);
 
     // sequences
     let seqDone = false;
     for (const dir of ['asc', 'desc']) {
       const t = trailingSeq(s, dir);
       const seqPts = { 3: 10, 4: 24, 5: 36, 6: 48, 7: 60, 8: 75 };
-      if (t >= 3 && !seqDone) { add(seqPts[t], `শেষে ${dir === 'asc' ? 'ক্রমিক' : 'উল্টো ক্রমিক'} ${toBn(s.slice(-t))}`); seqDone = true; }
+      if (t >= 3 && !seqDone) { add(seqPts[t], `শেষে ${dir === 'asc' ? 'ক্রমিক' : 'উল্টো ক্রমিক'} ${toBn(s.slice(-t))}`, `${dir === 'asc' ? 'Ascending' : 'Descending'} run at the end ${s.slice(-t)}`); seqDone = true; }
     }
     if (!seqDone) {
       const l = Math.max(longestSeq(s, 'asc'), longestSeq(s, 'desc'));
-      if (l >= 4) add(l * 3, `মাঝে ${toBn(l)} অংকের ক্রমিক সংখ্যা`);
+      if (l >= 4) add(l * 3, `মাঝে ${toBn(l)} অংকের ক্রমিক সংখ্যা`, `${l}-digit sequence in the middle`);
     }
 
     // repeated blocks
     const l4 = s.slice(-4), l6 = s.slice(-6);
-    if (s.slice(0, 4) === s.slice(4) && longestRun(s) < 4) add(42, `ডাবল ব্লক ${toBn(s.slice(0, 4))}-${toBn(s.slice(4))}`);
-    else if (l6.slice(0, 3) === l6.slice(3) && trailingRun(l6) < 3) add(24, `ABCABC (${toBn(l6)})`);
-    if (/^(\d)(\d)(\1\2)+$/.test(s) && s[0] !== s[1]) add(55, `পুরোটা জোড়া প্যাটার্ন (${toBn(s.slice(0, 2))}×৪)`);
-    else if (/(\d)(\d)\1\2\1\2$/.test(s) && l6[0] !== l6[1]) add(34, `শেষে ABABAB (${toBn(l6)})`);
-    else if (/(\d)(\d)\1\2$/.test(s) && l4[0] !== l4[1]) add(18, `শেষে ABAB (${toBn(l4)})`);
-    if (/(\d)\1(\d)\2(\d)\3$/.test(s) && !(l6[0] === l6[2] && l6[2] === l6[4])) add(28, `AABBCC (${toBn(l6)})`);
-    else if (/(\d)\1(\d)\2$/.test(s) && l4[0] !== l4[2]) add(14, `AABB (${toBn(l4)})`);
+    if (s.slice(0, 4) === s.slice(4) && longestRun(s) < 4) add(42, `ডাবল ব্লক ${toBn(s.slice(0, 4))}-${toBn(s.slice(4))}`, `Double block ${s.slice(0, 4)}-${s.slice(4)}`);
+    else if (l6.slice(0, 3) === l6.slice(3) && trailingRun(l6) < 3) add(24, `ABCABC (${toBn(l6)})`, `ABCABC (${l6})`);
+    if (/^(\d)(\d)(\1\2)+$/.test(s) && s[0] !== s[1]) add(55, `পুরোটা জোড়া প্যাটার্ন (${toBn(s.slice(0, 2))}×৪)`, `Full pair pattern (${s.slice(0, 2)}×4)`);
+    else if (/(\d)(\d)\1\2\1\2$/.test(s) && l6[0] !== l6[1]) add(34, `শেষে ABABAB (${toBn(l6)})`, `ABABAB at the end (${l6})`);
+    else if (/(\d)(\d)\1\2$/.test(s) && l4[0] !== l4[1]) add(18, `শেষে ABAB (${toBn(l4)})`, `ABAB at the end (${l4})`);
+    if (/(\d)\1(\d)\2(\d)\3$/.test(s) && !(l6[0] === l6[2] && l6[2] === l6[4])) add(28, `AABBCC (${toBn(l6)})`, `AABBCC (${l6})`);
+    else if (/(\d)\1(\d)\2$/.test(s) && l4[0] !== l4[2]) add(14, `AABB (${toBn(l4)})`, `AABB (${l4})`);
 
     // palindromes (skip if already all-same)
     if (lr < 8) {
-      if (s === rev(s)) add(40, `পুরো আয়না/প্যালিনড্রোম (${toBn(s)})`);
-      else if (l6 === rev(l6) && trailingRun(l6) < 6) add(20, `শেষ ৬ অংক আয়না (${toBn(l6)})`);
+      if (s === rev(s)) add(40, `পুরো আয়না/প্যালিনড্রোম (${toBn(s)})`, `Full mirror / palindrome (${s})`);
+      else if (l6 === rev(l6) && trailingRun(l6) < 6) add(20, `শেষ ৬ অংক আয়না (${toBn(l6)})`, `Last 6 digits mirrored (${l6})`);
     }
 
     // round & lucky endings
-    if (tr < 3 && s.endsWith('00')) add(6, 'শেষে ০০');
-    if (/[1-9]000$/.test(s) && tr === 3) add(8, 'রাউন্ড নাম্বার (…০০০)');
-    if (s.endsWith('786')) add(22, 'শেষে ৭৮৬ (লাকি)');
-    else if (s.includes('786')) add(8, '৭৮৬ আছে');
+    if (tr < 3 && s.endsWith('00')) add(6, 'শেষে ০০', 'Ends in 00');
+    if (/[1-9]000$/.test(s) && tr === 3) add(8, 'রাউন্ড নাম্বার (…০০০)', 'Round number (…000)');
+    if (s.endsWith('786')) add(22, 'শেষে ৭৮৬ (লাকি)', 'Ends in 786 (lucky)');
+    else if (s.includes('786')) add(8, '৭৮৬ আছে', 'Contains 786');
 
     // few unique digits
     const u = new Set(s).size;
-    if (u <= 2) add(26, `মাত্র ${toBn(u)} ধরনের অংক`);
-    else if (u === 3) add(14, 'মাত্র ৩ ধরনের অংক');
-    else if (u === 4) add(5, 'মাত্র ৪ ধরনের অংক');
+    if (u <= 2) add(26, `মাত্র ${toBn(u)} ধরনের অংক`, `Only ${u} distinct digits`);
+    else if (u === 3) add(14, 'মাত্র ৩ ধরনের অংক', 'Only 3 distinct digits');
+    else if (u === 4) add(5, 'মাত্র ৪ ধরনের অংক', 'Only 4 distinct digits');
 
     // matches operator code, e.g. 018-18…, 016-16…
     const code = full.slice(0, 2); // '18' or '16'
-    if (s.startsWith(code + code)) add(12, `অপারেটর কোড ${toBn(code)} এর সাথে মিল`);
-    else if (s.endsWith(code + code)) add(8, `শেষে অপারেটর কোড ${toBn(code + code)}`);
+    if (s.startsWith(code + code)) add(12, `অপারেটর কোড ${toBn(code)} এর সাথে মিল`, `Matches operator code ${code}`);
+    else if (s.endsWith(code + code)) add(8, `শেষে অপারেটর কোড ${toBn(code + code)}`, `Operator code ${code + code} at the end`);
 
     if (extra && extra.bday && extra.bday.length) {
       const hit = extra.bday.find((t) => (t.length === 8 ? s === t : s.endsWith(t)));
-      if (hit) add(hit.length >= 6 ? 30 : 18, `আপনার বিশেষ তারিখ (${toBn(hit)})`);
+      if (hit) add(hit.length >= 6 ? 30 : 18, `আপনার বিশেষ তারিখ (${toBn(hit)})`, `Your special date (${hit})`);
     }
     pts = Math.min(100, pts);
     reasons.sort((a, b) => b.p - a.p);
@@ -107,10 +107,10 @@
   }
 
   const TIERS = {
-    diamond: { min: 70, label: 'ডায়মন্ড', icon: '💎' },
-    gold:    { min: 45, label: 'গোল্ড', icon: '🥇' },
-    silver:  { min: 22, label: 'সিলভার', icon: '🥈' },
-    normal:  { min: 0,  label: 'সাধারণ', icon: '▫️' }
+    diamond: { min: 70, label: 'ডায়মন্ড', en: 'Diamond', icon: '💎' },
+    gold:    { min: 45, label: 'গোল্ড', en: 'Gold', icon: '🥇' },
+    silver:  { min: 22, label: 'সিলভার', en: 'Silver', icon: '🥈' },
+    normal:  { min: 0,  label: 'সাধারণ', en: 'Regular', icon: '▫️' }
   };
   function tierOf(p) { return p >= 70 ? 'diamond' : p >= 45 ? 'gold' : p >= 22 ? 'silver' : 'normal'; }
   const TIER_RANK = { normal: 0, silver: 1, gold: 2, diamond: 3 };
@@ -231,6 +231,61 @@
         gen: (r, h, al) => genFromTokens(r, h, custom, al)
       }
     };
+    // Simple search: the typed digits (1–6) appear in the number, preferably at the end.
+    const q = opts.query ? String(opts.query).replace(/\D/g, '').slice(0, 8) : '';
+    P.query = {
+      label: 'সংখ্যা খুঁজুন',
+      test: (s) => !!q && s.includes(q),
+      gen: (r, h, al) => {
+        if (!q) return null;
+        const free = 8 - h.length - q.length;
+        if (free < 0) return null;
+        if (r() < 0.65 || free === 0) return withTail(r, h, q, al);
+        const k = R(r, free + 1); // q somewhere after the head
+        return h + fill(r, k, al) + q + fill(r, free - k, al);
+      }
+    };
+    /* ---- v2 scan categories ---- */
+    const qd = q.replace(/\D/g, '');
+    const one = qd.length === 1 ? qd : null;           // optional fixed digit
+    const CELEB = ['786', '786786', '1971', '1952', '007', '0007', '143', '1000', '2026', '0786'];
+    const YEAR_RE = /(19[5-9]\d|20[0-2]\d)$/;
+    const fixedYear = /^(19|20)\d\d$/.test(qd) ? qd : null;
+    const ar4 = (t) => { const d = t.split('').map(Number), k = d[1] - d[0]; return [1, -1, 2, -2].includes(k) && d[2] - d[1] === k && d[3] - d[2] === k; };
+    const cpat = opts.pattern ? parsePattern(opts.pattern) : null;
+    Object.assign(P, {
+      triple: {
+        test: (s) => trailingRun(s) >= 3 && (!one || s.slice(-1) === one),
+        gen: (r, h, al) => withTail(r, h, (one || rd(r, al)).repeat(3 + (r() < 0.35 ? 1 : 0) + (r() < 0.1 ? 1 : 0)), al)
+      },
+      pairs: {
+        test: (s) => (/(\d)\1(\d)\2$/.test(s) && s[5] !== s[6]) || (/(\d)(\d)\1\2$/.test(s) && s[6] !== s[7]),
+        gen: (r, h, al) => { const [a, b] = pair(r, one ? [one, ...al.filter((x) => x !== one)] : al); const x = one || a; const y = b === x ? (x === '9' ? '0' : String(+x + 1)) : b; return withTail(r, h, r() < 0.5 ? x + x + y + y : x + y + x + y, al); }
+      },
+      celebrity: {
+        test: (s) => CELEB.some((c) => s.endsWith(c)) || (s.slice(0, 4) === s.slice(4)),
+        gen: (r, h, al) => { if (r() < 0.2) { const x = lead(r, h, 4, al); return x + x; } return withTail(r, h, CELEB[R(r, CELEB.length)], al); }
+      },
+      years: {
+        test: (s) => (fixedYear ? s.endsWith(fixedYear) : YEAR_RE.test(s)),
+        gen: (r, h, al) => withTail(r, h, fixedYear || String(1960 + R(r, 67)), al)
+      },
+      zerobin: {
+        test: (s) => /[01]{6}$/.test(s) || /0000$/.test(s) || /[1-9]000$/.test(s),
+        gen: (r, h, al) => { const k = R(r, 3); if (k === 0) return withTail(r, h, '0000', al); if (k === 1) return withTail(r, h, rd(r, '123456789'.split('')) + '000', al); return withTail(r, h, fill(r, 6, ['0', '1']), al); }
+      },
+      ends: {
+        test: (s) => !!qd && s.endsWith(qd),
+        gen: (r, h, al) => (qd && h.length + qd.length <= 8 ? withTail(r, h, qd, al) : null)
+      },
+      math: {
+        test: (s) => ar4(s.slice(-4)),
+        gen: (r, h, al) => { const k = [1, -1, 2, -2][R(r, 4)]; const len = 4 + (r() < 0.3 ? 1 : 0); const st = k > 0 ? R(r, 10 - k * (len - 1)) : 9 - R(r, 10 + k * (len - 1)); let t = ''; for (let i = 0; i < len; i++) t += st + k * i; return /^\d+$/.test(t) && t.length === len ? withTail(r, h, t, al) : null; }
+      },
+      customd: cpat && cpat.ok && /[*A-Z]/.test(cpat.text) ? {
+        test: (s) => matchTokens(s, cpat.tokens), gen: (r, h, al) => genFromTokens(r, h, cpat.tokens, al), opHint: cpat.opHint
+      } : P.query
+    });
     P.mix = {
       label: 'সেরা মিক্স (সব ভিআইপি)',
       keys: ['rep4', 'rep5', 'zero', 'asc', 'desc', 'mirror', 'abab', 'aabb', 'double', 'lucky786', 'opcode'],
