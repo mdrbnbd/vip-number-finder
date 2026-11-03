@@ -321,6 +321,9 @@ body[data-op=BOTH]{--opc:#f05014}
 .tx-row input,.tx-row select{min-height:44px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font:inherit;font-size:1rem;padding:0 12px}
 .tx-bar{height:8px;background:var(--bg3);border-radius:6px;overflow:hidden;margin:8px 0 2px}
 .tx-bar div{height:100%;width:0;background:linear-gradient(90deg,var(--t-prem),var(--t-gold),var(--t-dia));transition:width .3s}
+.tx-bar.indet div{width:35%!important;animation:txIndet 1.4s ease-in-out infinite;transition:none}
+@keyframes txIndet{0%{transform:translateX(-100%)}100%{transform:translateX(290%)}}
+@media (prefers-reduced-motion:reduce){.tx-bar.indet div{animation-duration:4s}}
 .tx-rules{margin-top:8px}
 .tx-rules summary{cursor:pointer;font-weight:700;color:var(--text);padding:6px 0}
 .tr-grp{border-left:4px solid var(--t-reg);padding:4px 0 4px 10px;margin:8px 0}
