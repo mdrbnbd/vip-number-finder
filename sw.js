@@ -1,6 +1,6 @@
 /* Service worker: caches the app shell only. API calls (other origin) are never cached. */
-const CACHE = 'vnf-v7';
-const SHELL = ['./', 'index.html', 'styles.css?v=7', 'vip.js?v=7', 'i18n.js?v=7', 'app.js?v=7', 'exact.js?v=7', 'manifest.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png'];
+const CACHE = 'vnf-v8';
+const SHELL = ['./', 'index.html', 'styles.css?v=8', 'vip.js?v=8', 'i18n.js?v=8', 'app.js?v=8', 'exact.js?v=8', 'manifest.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

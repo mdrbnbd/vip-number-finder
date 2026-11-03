@@ -292,17 +292,3 @@ body[data-op=BOTH]{--opc:#f05014}
 .badge.grp.g-prem { background: #c7d2fe; color: #1e1b4b; } .badge.grp.g-elite { background: #111; color: #ffd54a; }
 .mini.del { color: #c62828; }
 .btn.danger { color: #c62828; border-color: #c62828; }
-/* v7: operator switch + Grameenphone (not checked) */
-.net-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 10px; }
-.net-seg button { padding: 9px 6px; border: 2px solid #ddd; border-radius: 12px; background: #fff; color: #111; text-align: center; line-height: 1.25; }
-.net-seg button b { display: block; font-size: 16px; }
-.net-seg button small { display: block; font-size: 11px; color: #666; }
-.net-seg button.on { border-color: #111; background: #111; color: #fff; }
-.net-seg button.on small { color: #ddd; }
-.net-seg button[data-net="GP"].on { border-color: #19AAF8; background: #0a6fa8; }
-.gp-banner { border: 2px solid #f0a500; background: #fff7e0; color: #4a3500; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; font-size: 14px; line-height: 1.5; }
-.gp-banner p { margin: 0 0 8px; }
-.gp-banner small { color: #6b5200; }
-.gp-banner a { display: inline-block; font-weight: 700; color: #fff; background: #0a6fa8; padding: 7px 12px; border-radius: 10px; text-decoration: none; }
-.badge.GP { color: #19AAF8; border-color: #19AAF8; }
-.badge.unchk { background: #fff3cd; color: #7a4f00; border: 1px solid #f0a500; white-space: normal; font-weight: 700; }

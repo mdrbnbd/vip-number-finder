@@ -8,9 +8,7 @@
 
   const OPS = {
     ROBI:   { code: '018', intl: '88018', label: 'রবি', en: 'Robi', short: 'রবি ০১৮', shortEn: 'Robi 018', buy: 'https://www.robi.com.bd/bn/sim-services?requestType=NEW' },
-    AIRTEL: { code: '016', intl: '88016', label: 'এয়ারটেল', en: 'Airtel', short: 'এয়ারটেল ০১৬', shortEn: 'Airtel 016', buy: 'https://cirkle.digital/bn/sim-services?requestType=NEW' },
-    // v7: Grameenphone — pattern generator only (GP has no public availability check)
-    GP:     { code: '017', intl: '88017', label: 'গ্রামীণফোন', en: 'Grameenphone', short: 'জিপি ০১৭/০১৩', shortEn: 'GP 017/013', buy: 'https://www.grameenphone.com/shop/devices/sim', unchecked: true }
+    AIRTEL: { code: '016', intl: '88016', label: 'এয়ারটেল', en: 'Airtel', short: 'এয়ারটেল ০১৬', shortEn: 'Airtel 016', buy: 'https://cirkle.digital/bn/sim-services?requestType=NEW' }
   };
 
   const BN = '০১২৩৪৫৬৭৮৯';
@@ -20,7 +18,7 @@
   // msisdn helpers: intl 8801812345678 <-> local 01812345678 <-> sub 12345678
   const subOf = (msisdn) => String(msisdn).slice(-8);
   const localOf = (msisdn) => { const s = String(msisdn); return s.startsWith('880') ? '0' + s.slice(3) : s; };
-  const brandOf = (msisdn) => { const m = String(msisdn); return m.startsWith('88016') ? 'AIRTEL' : /^880(17|13)/.test(m) ? 'GP' : 'ROBI'; };
+  const brandOf = (msisdn) => (String(msisdn).startsWith('88016') ? 'AIRTEL' : 'ROBI');
   const pretty = (msisdn) => { const l = localOf(msisdn); return l.slice(0, 5) + '-' + l.slice(5, 8) + '-' + l.slice(8); };
 
   const rev = (s) => s.split('').reverse().join('');
