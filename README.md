@@ -54,9 +54,3 @@ Every number gets a tier badge + tier score (rules on the 8 digits after 018/016
 "👑 Find by category": one tap checks generated Diamond/Gold/Premium candidates with the official Robi availability
 endpoint (3 lanes, ~0.6 s gap, shared back-off, max 240 checks per tap) and shows only numbers reported available.
 Results can be filtered by tier chips and sorted by tier/score. Tests: `node test-tiers.js`.
-
-### v10 — unlimited tier search
-- The one-tap tier search has no check cap any more: it keeps going until you tap ⏹ Stop / ⏸ Pause or leave the page (optional "How many" target, default ∞).
-- Pauses automatically while the tab is hidden and resumes when visible.
-- Polite pacing unchanged (3 lanes, 0.55–0.85 s gap); 429/5xx back-off in `callApi`, plus exponential back-off 2 s → 60 s on connection errors, then auto-resume — never gives up.
-- Live counter: checked · 💎 Diamond · 🥇 Gold · 💜 Premium found. "▶ আরও খুঁজুন" resumes a stopped search where it left off.

@@ -361,12 +361,3 @@ body[data-op=BOTH]{--opc:#f05014}
 .exact input{background:var(--bg3);color:var(--text);border-color:var(--border)}
 .exact details summary{color:var(--muted)}
 .ex-sug button{background:var(--bg2);color:var(--text);border-color:var(--border)}
-.tx-count{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;justify-content:center}
-.tx-count .tc{font-size:.8rem;padding:5px 10px;border-radius:99px;background:var(--bg2);border:1px solid var(--border);font-weight:600}
-.tx-count .tc b{font-size:.95rem;margin-left:2px}
-.tx-count .tc-diamond{border-color:var(--t-dia)}.tx-count .tc-gold{border-color:var(--t-gold)}.tx-count .tc-premium{border-color:var(--t-prem)}
-.tx-count .tc-rate{color:var(--muted)}
-.tx-bar.live div{width:40%!important;animation:txSlide 1.4s ease-in-out infinite}
-@keyframes txSlide{0%{margin-left:-40%}100%{margin-left:100%}}
-@media (prefers-reduced-motion:reduce){.tx-bar.live div{animation:none;width:100%!important}}
-.btn.tx-more{background:linear-gradient(135deg,#fde68a,#f59e0b);color:#3b2300;font-weight:800;border:0}
