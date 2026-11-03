@@ -196,8 +196,19 @@
   const GRPS = [['all', 'সব', 'All'], ['reg', 'রেগুলার', 'Regular'], ['gold', 'গোল্ড', 'Gold'], ['prem', 'প্রিমিয়াম', 'Premium'], ['elite', 'এলিট', 'Elite']];
   const grpOf = (it) => { const v = vipOfItem(it); return v >= 90 ? 'elite' : v >= 75 ? 'prem' : v >= 60 ? 'gold' : 'reg'; };
   const grpName = (g) => { const x = GRPS.find((y) => y[0] === g); return lang === 'en' ? x[2] : x[1]; };
-  const HKEY = 'vnf-history-v1';
-  function saveHist() { try { localStorage.setItem(HKEY, JSON.stringify([...results.values()].filter((x) => x.src === 'exact'))); } catch {} }
+  const HKEY = 'vnf-history-v1', HKEY_GP = 'vnf-history-gp-v1';
+  let NET = LS.get('vnf-netop', 'ROBI') === 'GP' ? 'GP' : 'ROBI';   // v7 operator switch: ROBI (Robi 018 + Airtel 016, live check) | GP (generator, not checked)
+  const hkey = () => (NET === 'GP' ? HKEY_GP : HKEY);
+  const isGP = () => NET === 'GP';
+  const UNCHK = '⚠️ যাচাই নেই, GP সেন্টারে কনফার্ম করুন / Not checked';
+  function saveHist() { try { localStorage.setItem(hkey(), JSON.stringify([...results.values()].filter((x) => x.src === 'exact'))); } catch {} }
+  function loadHist() { try { (JSON.parse(localStorage.getItem(hkey()) || '[]')).forEach((it) => { it.seq = ++seqN; seen.add(it.msisdn); results.set(it.msisdn, it); }); } catch {} searchState = results.size ? 'done' : 'idle'; }
+  function setNet(op) {
+    op = op === 'GP' ? 'GP' : 'ROBI'; if (op === NET) return;
+    saveHist(); NET = op; LS.set('vnf-netop', op);
+    results.clear(); bonus.clear(); view.grp = 'all'; view.tab = 'found'; loadHist();
+    document.body.classList.toggle('gp', op === 'GP'); scheduleRender();
+  }
   function renderGrps(all) {
     const box = $('grpTabs'); if (!box) return; box.innerHTML = '';
     GRPS.forEach(([g]) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.g = g; b.className = g === view.grp ? 'on' : '';
@@ -261,8 +272,9 @@
         ${item.src === 'bonus' ? `<span class="badge bonus">${T('near')}</span>` : ''}
         ${item.src === 'list' && item.avail === true ? `<span class="badge free">${T('freeNow')}</span>` : ''}
         ${item.gone ? `<span class="badge gone">${item.src === 'list' ? T('notFree') : T('gone')}</span>` : ''}
+        ${item.brand === 'GP' ? `<span class="badge unchk">${UNCHK}</span>` : ''}
         </div>
-        <button class="mini" data-a="verify" type="button" aria-label="verify">🔄</button>
+        ${item.brand === 'GP' ? '' : '<button class="mini" data-a="verify" type="button" aria-label="verify">🔄</button>'}
         <button class="mini fav ${isFav(item.msisdn) ? 'on' : ''}" data-a="fav" type="button" aria-label="favourite">${isFav(item.msisdn) ? '★' : '☆'}</button>
         <button class="mini del" data-a="del" type="button" aria-label="delete">✕</button>
       </div>
@@ -270,7 +282,7 @@
       <div class="reason">${esc(top)} · <button class="link-btn" data-a="why" type="button">${T('why')}</button></div>
       <div class="acts2">
         <button class="btn ghost" data-a="copy" type="button">${T('copy')}</button>
-        <button class="btn buy" data-a="buy" type="button">${T('buy')}</button>
+        <button class="btn buy" data-a="buy" type="button">${item.brand === 'GP' ? (lang === 'en' ? '🛒 GP online shop' : '🛒 GP অনলাইন শপ') : T('buy')}</button>
       </div>`;
     el.onclick = (e) => { const a = e.target.closest('[data-a]'); if (a) actions[a.dataset.a](item, a); };
     return el;
@@ -282,12 +294,12 @@
     const all = baseItems(), base = all.filter((x) => x.src === 'exact' || vipOfItem(x) >= S.minScore);
     $('cAll').textContent = N(base.length); renderGrps(all.filter((z) => z.src === 'exact' || vipOfItem(z) >= S.minScore));
     [5, 4, 3].forEach((s) => ($('c' + s).textContent = N(base.filter((x) => starOf(x) === s).length)));
-    $('resTitle').textContent = view.tab === 'favs' ? T('favsTitle', N(favs.length)) : all.some((x) => x.src === 'list') ? T('resTitleList', N(base.length), N(all.length)) : results.size || searchState !== 'idle' ? T('resTitle', N(results.size)) : T('resTitle0');
+    $('resTitle').textContent = view.tab === 'favs' ? T('favsTitle', N(favs.length)) : all.some((x) => x.src === 'list') ? T('resTitleList', N(base.length), N(all.length)) : results.size || searchState !== 'idle' ? (isGP() ? (lang === 'en' ? `Results · ${N(results.size)} possible GP numbers (not checked)` : `ফলাফল · ${N(results.size)}টি সম্ভাব্য GP নাম্বার (যাচাই নেই)`) : T('resTitle', N(results.size))) : T('resTitle0');
     const list = $('list'); const items = currentItems();
     keepScroll(list, () => { list.innerHTML = '';
     if (!items.length) {
       const hid = all.length - base.length;
-      const html = view.tab === 'favs' && !favs.length ? T('emptyFavs') : hid && view.star === 'all' ? '🔽 ' + T('emptyMin', N(hid)) : all.length ? T('emptyFilter') : { idle: T('emptyIdle'), running: T('emptyRunning'), done: T('emptyNone') }[searchState];
+      const html = view.tab === 'favs' && !favs.length ? T('emptyFavs') : hid && view.star === 'all' ? '🔽 ' + T('emptyMin', N(hid)) : all.length ? T('emptyFilter') : isGP() ? (lang === 'en' ? '<b>Grameenphone pattern generator</b><br>Enter your code (017… / 013…) above and tap <b class="pill">Generate</b>. These numbers are <b>NOT checked</b> — confirm at a GP centre or the GP online shop.' : '<b>গ্রামীণফোন প্যাটার্ন জেনারেটর</b><br>উপরে আপনার কোড (017… / 013…) দিয়ে <b class="pill">তৈরি করুন</b> চাপুন। এই নাম্বারগুলো <b>যাচাই করা নয়</b> — GP সেন্টার বা GP অনলাইন শপে কনফার্ম করুন।') : { idle: T('emptyIdle'), running: T('emptyRunning'), done: T('emptyNone') }[searchState];
       list.innerHTML = `<div class="empty ${searchState}">${html}</div>`;
       return;
     }
@@ -347,7 +359,7 @@
   $('txtBtn').onclick = async () => {
     const it = currentItems(); if (!it.length) return toast(T('tNothing'));
     const stamp = new Date().toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB');
-    const lines = [`${T('txtHead')} — ${stamp}`, ''].concat(it.map((x) => `${V.localOf(x.msisdn)}  VIP ${vipOfItem(x)}  ${'★'.repeat(starOf(x))} ${starName(starOf(x))}  ${opName(x.brand)}`));
+    const lines = [`${T('txtHead')} — ${stamp}`, ''].concat(it.map((x) => `${V.localOf(x.msisdn)}  VIP ${vipOfItem(x)}  ${'★'.repeat(starOf(x))} ${starName(starOf(x))}  ${opName(x.brand)}${x.brand === 'GP' ? '  ' + UNCHK : ''}`));
     const ops = [...new Set(it.map((x) => x.brand))]; lines.push('', ...ops.map((b) => `${T('txtBuy')} ${opName(b)}: ${OPS[b].buy}`));
     const text = lines.join('\n');
     download('vip-numbers.txt', '\ufeff' + text, 'text/plain;charset=utf-8'); await copyText(text);
@@ -672,11 +684,11 @@
   $('installBtn').onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $('installBtn').classList.add('hidden'); };
   if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
-  try { (JSON.parse(localStorage.getItem(HKEY) || '[]')).forEach((it) => { it.seq = ++seqN; seen.add(it.msisdn); results.set(it.msisdn, it); }); if (results.size) searchState = 'done'; } catch {}
+  loadHist(); document.body.classList.toggle('gp', isGP());
   $('clearHist').onclick = () => { if (!confirm(lang === 'en' ? 'Delete all saved results and scan progress?' : 'সব সংরক্ষিত ফলাফল ও স্ক্যানের অগ্রগতি মুছে ফেলবেন?')) return;
-    results.clear(); bonus.clear(); localStorage.removeItem(HKEY); localStorage.removeItem('vnf-exact-v1'); searchState = 'idle'; scheduleRender(); if (window.VNF_EXACT) VNF_EXACT.reset(); };
+    results.clear(); bonus.clear(); localStorage.removeItem(hkey()); if (!isGP()) localStorage.removeItem('vnf-exact-v1'); searchState = 'idle'; scheduleRender(); if (window.VNF_EXACT) VNF_EXACT.reset(); };
   scheduleRender();
-  window.VNF = { addResult, addBonus, callApi: (m, b) => callApi(m, b, true), learnHead, toast: (t) => toast(t), lang: () => lang, showFound: () => { view.tab = 'found'; searchState = 'running'; scheduleRender(); }, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
+  window.VNF = { net: () => NET, setNet, addResult, addBonus, callApi: (m, b) => callApi(m, b, true), learnHead, toast: (t) => toast(t), lang: () => lang, showFound: () => { view.tab = 'found'; searchState = 'running'; scheduleRender(); }, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
   $('qInput').value = S.q[S.cat] || '';
   setOp(S.op); renderLimit(); renderMode(); renderMin(); applyLang();
 })();

@@ -16,9 +16,9 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
-<body class="v6">
+<body class="v6 v7">
 <div class="app">
   <header class="top">
     <div class="brand">
@@ -58,6 +58,11 @@
 
     <div id="scanPane">
     <section class="exact" id="exactBox">
+      <div class="net-seg" id="netSeg" role="tablist" aria-label="Operator">
+        <button type="button" data-net="ROBI"><b>রবি · এয়ারটেল</b><small>Robi 018 · Airtel 016 · ✅ live check</small></button>
+        <button type="button" data-net="GP"><b>গ্রামীণফোন</b><small>Grameenphone 017 · 013 · ⚠️ not checked</small></button>
+      </div>
+      <div class="gp-banner hidden" id="gpBanner" role="note"><p id="gpBannerTxt"></p><a id="gpShop" href="https://www.grameenphone.com/shop/devices/sim" target="_blank" rel="noopener">🛒 GP অনলাইন সিম শপ</a></div>
       <h3 id="exTitle"></h3>
       <div class="ex-modes" id="exModes" role="tablist"><button type="button" data-m="C"></button><button type="button" data-m="D"></button><button type="button" data-m="T"></button></div>
       <p class="hint" id="exHint"></p>
@@ -225,9 +230,9 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="vip.js?v=6"></script>
-<script src="i18n.js?v=6"></script>
-<script src="app.js?v=6"></script>
-<script src="exact.js?v=6"></script>
+<script src="vip.js?v=7"></script>
+<script src="i18n.js?v=7"></script>
+<script src="app.js?v=7"></script>
+<script src="exact.js?v=7"></script>
 </body>
 </html>
