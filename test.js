@@ -42,3 +42,27 @@ console.log('all tests passed');
   assert.ok(cb.length > 5 && cb.every((x) => /(\d)(\d)\1\2$/.test(x.sub)), 'custom pattern');
   console.log('category tests passed');
 }
+
+// smart pattern search
+{
+  const s = V.patternSpec({ start: '18', end: '77' });
+  assert.ok(s.ok); assert.equal(s.total, 10000); assert.equal(V.previewTpl(s), '18____77');
+  assert.ok(V.matchSpec('18123477', s)); assert.ok(!V.matchSpec('19123477', s));
+  const c = V.patternSpec({ mid: '1234' });
+  assert.ok(c.ok); assert.equal(c.placements.length, 5);
+  { let n = 0; for (let i = 0; i < 1e8; i++) if (String(i).padStart(8, '0').includes('1234')) n++; assert.equal(c.total, n); }
+  assert.ok(V.matchSpec('99123499', c)); assert.ok(!V.matchSpec('99124399', c));
+  const src = V.patternSource(c, { code: '16', heads: ['12'] });
+  assert.ok(src.exhaustive); assert.equal(src.total, c.total);
+  const all = []; let b; while ((b = src.next(5000)).length) all.push(...b);
+  assert.equal(new Set(all).size, c.total); assert.ok(all.every((x) => V.matchSpec(x, c)));
+  assert.equal(V.patternSpec({ start: '12345', end: '6789' }).error, 'long');
+  assert.equal(V.patternSpec({ start: '12', mid: '5', end: '7', pos: 1 }).error, 'pos');
+  const e = V.patternSpec({ start: '12', mid: '55', pos: 3 }); assert.ok(e.ok); assert.equal(e.templates[0], '1255____');
+  const big = V.patternSpec({ end: '7' });
+  const bs = V.patternSource(big, { code: '18', heads: ['25', '20'] });
+  assert.ok(!bs.exhaustive); const first = bs.next(300);
+  assert.equal(first.length, 300); assert.equal(new Set(first).size, 300); assert.ok(first.every((x) => x.endsWith('7')));
+  assert.ok(first.slice(0, 20).every((x) => /^(25|20)/.test(x)));
+  console.log('pattern tests passed (contains 1234 total =', c.total + ')');
+}

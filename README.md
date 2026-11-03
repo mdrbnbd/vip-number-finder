@@ -2,6 +2,13 @@
 
 রবি (০১৮) ও এয়ারটেল (০১৬) এর **খালি থাকা** ভিআইপি নাম্বার এক ট্যাপে খোঁজার স্ট্যাটিক ওয়েব অ্যাপ। GitHub Pages-এ সরাসরি চলে, কোনো build step নেই।
 
+## Smart Search (v3)
+
+- **শুরুতে / Starts with**, **মাঝখানে / Contains** (anywhere or an exact position), **শেষে / Ends with** — any combination, up to 8 digits after 016/018, with a live preview (e.g. `016 12__ __77`) and a count of possible numbers.
+- Up to 200,000 candidates: every matching number is checked (best-looking and live-series first). Bigger spaces: VIP-looking fills first, then a full pseudo-random sweep.
+- The extra free numbers the official API returns with each answer are collected too: matching ones join the results, other nice ones go to a separate **Bonus** section. Everything is de-duplicated.
+- Adaptive 2–10 parallel requests with paced starts and back-off on errors/429. Progress shows checked / total / found / ETA. **Limit list** has a **Max / সর্বোচ্চ** option (until all candidates are checked or you press Stop). The last search is remembered.
+
 ## ফিচার (v2 — সহজ স্ক্যানার)
 - ৩ ধাপ: **অপারেটর বাছুন → ধরন বাছুন → স্ক্যান করে কিনুন**
 - বড় দুটি অপারেটর বোতাম: এয়ারটেল বাংলাদেশ (০১৬) / রবি আজিয়াটা (০১৮); ইনপুটের ভেতরে +88016 / +88018 প্রিফিক্স

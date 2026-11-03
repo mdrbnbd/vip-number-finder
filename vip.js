@@ -356,8 +356,130 @@
     return out;
   }
 
+
+  /* ---------- Smart pattern search: starts with / contains / ends with ---------- */
+  // spec = { start, mid, end, pos }  (pos: 'any' or 1-based digit index inside the 8 digits after 016/018)
+  function patternSpec(raw) {
+    const clean = (v) => toEn(String(v || '')).replace(/\D/g, '').slice(0, 8);
+    const start = clean(raw.start), mid = clean(raw.mid), end = clean(raw.end);
+    const pos = raw.pos && raw.pos !== 'any' ? +raw.pos : 'any';
+    const a = start.length, b = mid.length, c = end.length;
+    const out = { start, mid, end, pos, ok: false, error: null, placements: [], templates: [], total: 0 };
+    if (!a && !b && !c) { out.error = 'empty'; return out; }
+    if (a + b + c > 8) { out.error = 'long'; return out; }
+    if (b) {
+      const lo = a, hi = 8 - c - b;
+      if (pos === 'any') for (let p = lo; p <= hi; p++) out.placements.push(p);
+      else if (pos - 1 >= lo && pos - 1 <= hi) out.placements.push(pos - 1);
+      else { out.error = 'pos'; return out; }
+    }
+    const base = Array(8).fill('_');
+    for (let i = 0; i < a; i++) base[i] = start[i];
+    for (let i = 0; i < c; i++) base[8 - c + i] = end[i];
+    out.base = base.join('');
+    if (!b) out.templates = [out.base];
+    else out.templates = out.placements.map((p) => { const t = base.slice(); for (let i = 0; i < b; i++) t[p + i] = mid[i]; return t.join(''); });
+    out.total = unionCount(out.templates);
+    out.ok = true;
+    return out;
+  }
+  function mergeTpl(x, y) {
+    let r = '';
+    for (let i = 0; i < 8; i++) { const p = x[i], q = y[i]; if (p === '_') r += q; else if (q === '_' || q === p) r += p; else return null; }
+    return r;
+  }
+  const freeOf = (t) => t.split('_').length - 1;
+  function unionCount(tpls) {
+    const n = tpls.length; if (!n) return 0;
+    if (n > 12) return tpls.reduce((s, t) => s + Math.pow(10, freeOf(t)), 0); // upper bound (never happens: max 8 placements)
+    let total = 0;
+    for (let m = 1; m < 1 << n; m++) {
+      let t = '________', bits = 0;
+      for (let i = 0; i < n && t; i++) if (m & (1 << i)) { t = mergeTpl(t, tpls[i]); bits++; }
+      if (t) total += (bits % 2 ? 1 : -1) * Math.pow(10, freeOf(t));
+    }
+    return total;
+  }
+  function matchSpec(sub, spec) {
+    if (!spec || !spec.ok || !/^\d{8}$/.test(sub)) return false;
+    if (spec.start && !sub.startsWith(spec.start)) return false;
+    if (spec.end && !sub.endsWith(spec.end)) return false;
+    if (spec.mid) return spec.placements.some((p) => sub.substr(p, spec.mid.length) === spec.mid);
+    return true;
+  }
+  // i-th fill of a template (digits of i written into its free slots, left to right)
+  function fillTpl(t, i) {
+    const f = freeOf(t); let d = String(i).padStart(f, '0'), k = 0, r = '';
+    for (let j = 0; j < 8; j++) r += t[j] === '_' ? d[k++] : t[j];
+    return r;
+  }
+  // VIP-looking fills tried first: same digit, repeat neighbours, runs up/down, pairs
+  function vipFills(t) {
+    const f = freeOf(t), out = new Set(); if (!f) return [t];
+    const fixed = t.replace(/_/g, '');
+    const seeds = [...new Set((fixed + '0123456789').split(''))];
+    for (const d of seeds) {
+      const dn = +d;
+      const fills = [
+        d.repeat(f),
+        Array.from({ length: f }, (_, i) => (dn + i + 1) % 10).join(''),
+        Array.from({ length: f }, (_, i) => (dn - i - 1 + 20) % 10).join(''),
+        Array.from({ length: f }, (_, i) => (i % 2 ? (dn + 1) % 10 : d)).join(''),
+        Array.from({ length: f }, (_, i) => (Math.floor(i / 2) % 2 ? '0' : d)).join(''),
+        '0'.repeat(f - 1) + d, d + '0'.repeat(f - 1)
+      ];
+      for (const s of fills) { let k = 0, r = ''; for (let j = 0; j < 8; j++) r += t[j] === '_' ? s[k++] : t[j]; out.add(r); }
+    }
+    return [...out];
+  }
+  /* Candidate source for a spec. next(n) returns up to n new subs (8 digits) in priority order, [] when exhausted.
+     small spaces (<= enumMax): every candidate, sorted best-first (live series + VIP score).
+     large spaces: VIP fills first, then a pseudo-random full sweep, live series first. */
+  function patternSource(spec, opt) {
+    opt = opt || {};
+    const enumMax = opt.enumMax || 200000, liveHeads = opt.heads || [], code = opt.code || '18';
+    const rank = (sub) => score('880' + code + sub).score + (liveHeads.includes(sub.slice(0, 2)) ? 1000 : liveHeads.some((h) => h[0] === sub[0]) ? 10 : 0) + Math.random() * 3;
+    const emitted = new Set(); let queue = [], qi = 0;
+    if (spec.total <= enumMax) {
+      for (const t of spec.templates) { const m = Math.pow(10, freeOf(t)); for (let i = 0; i < m; i++) emitted.add(fillTpl(t, i)); }
+      queue = [...emitted].map((s) => [s, rank(s)]).sort((x, y) => y[1] - x[1]).map((x) => x[0]);
+      return { exhaustive: true, total: emitted.size, next(n) { const r = queue.slice(qi, qi + n); qi += r.length; return r; } };
+    }
+    // large: build prioritized sub-templates (live heads merged in first)
+    const subs = [];
+    for (const h of liveHeads) for (const t of spec.templates) { const m = mergeTpl(t, h + '______'); if (m && !subs.includes(m)) subs.push(m); }
+    for (const t of spec.templates) if (!subs.includes(t)) subs.push(t);
+    const vip = []; for (const t of subs) for (const s of vipFills(t)) if (!emitted.has(s)) { emitted.add(s); vip.push(s); }
+    queue = vip.map((s) => [s, rank(s)]).sort((x, y) => y[1] - x[1]).map((x) => x[0]);
+    const sweeps = subs.map((t) => { const m = Math.pow(10, freeOf(t)); let a = 7919; while (gcd(a, m) !== 1) a += 2; return { t, m, a, b: Math.floor(Math.random() * m), i: 0 }; });
+    let si = 0, pend = [];
+    return {
+      exhaustive: false, total: spec.total,
+      next(n) {
+        const r = [];
+        while (r.length < n && qi < queue.length) r.push(queue[qi++]);
+        while (r.length < n && (pend.length || si < sweeps.length)) {
+          if (!pend.length) {
+            const w = sweeps[si]; const chunk = [];
+            while (chunk.length < 600 && w.i < w.m) { const s = fillTpl(w.t, (w.a * w.i + w.b) % w.m); w.i++; if (!emitted.has(s)) { emitted.add(s); chunk.push(s); } }
+            if (w.i >= w.m) si++;
+            pend = chunk.map((s) => [s, rank(s)]).sort((x, y) => y[1] - x[1]).map((x) => x[0]);
+          }
+          while (r.length < n && pend.length) r.push(pend.shift());
+        }
+        return r;
+      }
+    };
+  }
+  function gcd(a, b) { while (b) [a, b] = [b, a % b]; return a; }
+  function previewTpl(spec) {
+    if (!spec.templates.length) return '________';
+    return spec.pos === 'any' && spec.mid && spec.templates.length > 1 ? spec.base : spec.templates[0];
+  }
+
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
   return { OPS, TIERS, TIER_RANK, toBn, toEn, subOf, localOf, brandOf, pretty, score, tierOf, parsePattern, matchTokens,
-    passFilters, makePresets, bdayStrings, buildBatch, mulberry32, trailingRun, trailingSeq };
+    passFilters, makePresets, bdayStrings, buildBatch, mulberry32, trailingRun, trailingSeq,
+    patternSpec, matchSpec, unionCount, fillTpl, vipFills, patternSource, previewTpl };
 });

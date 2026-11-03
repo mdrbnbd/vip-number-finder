@@ -198,3 +198,28 @@ body{--opc:#e11d2a}body[data-op=ROBI]{--opc:#ff6a00}
 .made a:hover{text-decoration:underline}
 @media (max-width:420px){.export{grid-template-columns:1fr 1fr}.export .export-txt{grid-column:1/-1}.item .num{font-size:1.55rem}.steps{font-size:.78rem}}
 @media (max-width:350px){.scan-row{grid-template-columns:1fr}}
+
+/* v3: smart pattern search */
+.patbox{margin-top:12px;padding:12px;border-radius:14px;background:var(--bg3);border:1.5px solid var(--opc)}
+.pat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pat3 label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:700;color:var(--muted)}
+.pat3 input{width:100%;min-width:0;min-height:52px;text-align:center;font:inherit;font-size:1.2rem;font-weight:800;letter-spacing:1px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);padding:6px}
+.pat3 input:focus{outline:0;border-color:var(--opc)}
+.pat-pos{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;font-size:.85rem;font-weight:600}
+.pat-pos select{min-height:44px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font:inherit;padding:0 8px}
+.pat-preview{margin-top:12px;text-align:center;font-size:1.6rem;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums;padding:10px;border-radius:12px;background:var(--bg2)}
+.pat-preview .pp-code{color:var(--muted)}
+.pat-preview em{font-style:normal;color:var(--opc)}
+.pat-note{margin:6px 0 0;text-align:center;font-weight:700;font-size:.9rem;color:var(--opc)}
+.pat-note:empty{display:none}
+.patbox .hint{margin:8px 0 0}
+.patbox .hint.err{color:var(--danger);font-weight:700}
+.max-btn{min-height:44px;padding:0 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.max-btn.on{background:var(--opc);border-color:var(--opc);color:#fff}
+.limit-row input:disabled{opacity:.45}
+body[data-cat=smart] .scan-row .prefix-input{display:none}
+body[data-cat=smart] .scan-row{grid-template-columns:1fr}
+body[data-cat=smart] .btn.scan{width:100%}
+.stats{grid-template-columns:repeat(4,1fr)}
+.cats button[data-cat=smart]{grid-column:1/-1;min-height:60px}
+#bonusCard .item{opacity:.95}
