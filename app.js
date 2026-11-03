@@ -192,7 +192,15 @@
     if (i >= 0) favs.splice(i, 1); else favs.unshift({ ...item, at: Date.now() });
     LS.set('vnf-favs-v1', favs); toast(T(i >= 0 ? 'tFavDel' : 'tFavAdd')); updateFavBtn(); scheduleRender();
   }
-  const view = { tab: 'found', star: 'all', sort: 'score', q: '' };
+  const view = { tab: 'found', star: 'all', sort: 'new', q: '' };
+  let seqN = 0; const seen = new Set(); let firstPaint = true;
+  const rm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const newest = (a, b) => (b.seq || 0) - (a.seq || 0) || (b.at || 0) - (a.at || 0);
+  function keepScroll(el, fn) {
+    const top = el.getBoundingClientRect().top, h = el.offsetHeight; fn();
+    if (top < 0) { const d = el.offsetHeight - h; if (d) window.scrollBy(0, d); }
+  }
+  function mark(el, it) { const k = it.msisdn; if (!seen.has(k)) { seen.add(k); if (!firstPaint && !rm()) el.classList.add('fresh'); } return el; }
   let searchState = 'idle';
   function updateFavBtn() { $('showFavsBtn').textContent = T('showFavs', N(favs.length)); }
   function setTab(tab) { view.tab = tab; $('backToResults').classList.toggle('hidden', tab !== 'favs'); scheduleRender(); if (tab === 'favs') $('resultsCard').scrollIntoView({ behavior: 'smooth' }); }
@@ -207,10 +215,10 @@
   function baseItems() { return view.tab === 'favs' ? favs.slice() : [...results.values()]; }
   function currentItems() {
     let arr = baseItems();
-    arr = arr.filter((x) => vipOfItem(x) >= S.minScore);
+    arr = arr.filter((x) => x.src === 'exact' || vipOfItem(x) >= S.minScore);
     if (view.star !== 'all') arr = arr.filter((x) => String(starOf(x)) === view.star);
     if (view.q) arr = arr.filter((x) => V.localOf(x.msisdn).includes(view.q));
-    const cmp = { score: (a, b) => vipOfItem(b) - vipOfItem(a) || b.score - a.score || a.msisdn.localeCompare(b.msisdn), new: (a, b) => b.at - a.at, num: (a, b) => a.msisdn.localeCompare(b.msisdn) }[view.sort];
+    const cmp = { score: (a, b) => vipOfItem(b) - vipOfItem(a) || b.score - a.score || a.msisdn.localeCompare(b.msisdn), new: newest, num: (a, b) => a.msisdn.localeCompare(b.msisdn) }[view.sort];
     return arr.sort(cmp);
   }
   function numHtml(item) {
@@ -257,19 +265,23 @@
   function scheduleRender() { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } }
   function render() {
     renderQueued = false; renderBonus();
-    const all = baseItems(), base = all.filter((x) => vipOfItem(x) >= S.minScore);
+    const all = baseItems(), base = all.filter((x) => x.src === 'exact' || vipOfItem(x) >= S.minScore);
     $('cAll').textContent = N(base.length);
     [5, 4, 3].forEach((s) => ($('c' + s).textContent = N(base.filter((x) => starOf(x) === s).length)));
     $('resTitle').textContent = view.tab === 'favs' ? T('favsTitle', N(favs.length)) : all.some((x) => x.src === 'list') ? T('resTitleList', N(base.length), N(all.length)) : results.size || searchState !== 'idle' ? T('resTitle', N(results.size)) : T('resTitle0');
-    const list = $('list'); const items = currentItems(); list.innerHTML = '';
+    const list = $('list'); const items = currentItems();
+    keepScroll(list, () => { list.innerHTML = '';
     if (!items.length) {
       const hid = all.length - base.length;
       const html = view.tab === 'favs' && !favs.length ? T('emptyFavs') : hid && view.star === 'all' ? '🔽 ' + T('emptyMin', N(hid)) : all.length ? T('emptyFilter') : { idle: T('emptyIdle'), running: T('emptyRunning'), done: T('emptyNone') }[searchState];
       list.innerHTML = `<div class="empty ${searchState}">${html}</div>`;
       return;
     }
+    fillList(list, items, all, base); }); firstPaint = false;
+  }
+  function fillList(list, items, all, base) {
     const frag = document.createDocumentFragment();
-    items.slice(0, 500).forEach((it) => frag.appendChild(card(it)));
+    items.slice(0, 500).forEach((it) => frag.appendChild(mark(card(it), it)));
     const hid = all.length - base.length;
     if (hid) { const p = document.createElement('p'); p.className = 'hint hidden-note'; p.textContent = '🔽 ' + T('emptyMin', N(hid)); frag.appendChild(p); }
     list.appendChild(frag);
@@ -277,10 +289,11 @@
   function renderBonus() {
     $('bonusCard').classList.toggle('hidden', !bonus.size || view.tab === 'favs');
     $('bonusTitle').textContent = T('bonusTitle', N(bonus.size));
-    const list = $('bonusList'); list.innerHTML = '';
+    const list = $('bonusList');
+    keepScroll(list, () => { list.innerHTML = '';
     const frag = document.createDocumentFragment();
-    [...bonus.values()].filter((x) => vipOfItem(x) >= S.minScore).sort((a, b) => vipOfItem(b) - vipOfItem(a)).slice(0, 60).forEach((it) => frag.appendChild(card(it)));
-    list.appendChild(frag);
+    [...bonus.values()].filter((x) => vipOfItem(x) >= S.minScore).sort(newest).slice(0, 60).forEach((it) => frag.appendChild(mark(card(it), it)));
+    list.appendChild(frag); });
   }
 
   async function copyText(t) {
@@ -385,13 +398,13 @@
   }
   function addResult(msisdn, src, extra) {
     if (results.has(msisdn)) return false;
-    const item = { msisdn, brand: V.brandOf(msisdn), sub: V.subOf(msisdn), ...V.score(msisdn, extra && extra.want ? { want: extra.want } : null), src, at: Date.now(), cat: src === 'bonus' ? null : S.cat, qq: src === 'bonus' ? '' : S.q[S.cat] || '' };
+    const item = { msisdn, brand: V.brandOf(msisdn), sub: V.subOf(msisdn), ...V.score(msisdn, extra && extra.want ? { want: extra.want } : null), src, at: Date.now(), seq: ++seqN, cat: src === 'bonus' ? null : S.cat, qq: src === 'bonus' ? '' : S.q[S.cat] || '' };
     if (extra && extra.mask) { item.mask = extra.mask; item.qq = extra.label; }
     results.set(msisdn, item); bonus.delete(msisdn); scheduleRender(); return true;
   }
   function addBonus(msisdn) {
     if (results.has(msisdn) || bonus.has(msisdn)) return;
-    bonus.set(msisdn, { msisdn, brand: V.brandOf(msisdn), sub: V.subOf(msisdn), ...V.score(msisdn), src: 'bonus', at: Date.now() });
+    bonus.set(msisdn, { msisdn, brand: V.brandOf(msisdn), sub: V.subOf(msisdn), ...V.score(msisdn), src: 'bonus', at: Date.now(), seq: ++seqN });
     scheduleRender();
   }
   function beginUI(keep) {
@@ -653,7 +666,7 @@
   $('installBtn').onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $('installBtn').classList.add('hidden'); };
   if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
-  window.VNF = { addResult, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
+  window.VNF = { addResult, addBonus, callApi: (m, b) => callApi(m, b, true), learnHead, toast: (t) => toast(t), lang: () => lang, showFound: () => { view.tab = 'found'; searchState = 'running'; scheduleRender(); }, showWhy, results, bonus, S, renderPat, runList, startScan, stopScan, setLang: (l) => { lang = l; LS.set('vnf-lang', l); applyLang(); } };
   $('qInput').value = S.q[S.cat] || '';
   setOp(S.op); renderLimit(); renderMode(); renderMin(); applyLang();
 })();

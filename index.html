@@ -16,7 +16,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
 <div class="app">
@@ -57,6 +57,27 @@
     </div>
 
     <div id="scanPane">
+    <section class="exact" id="exactBox">
+      <h3 id="exTitle"></h3>
+      <p class="hint" id="exHint"></p>
+      <div class="ex2">
+        <label><span id="exStartL"></span><input id="exStart" inputmode="numeric" maxlength="11" placeholder="01766 / 018XX" autocomplete="off" /></label>
+        <label><span id="exEndL"></span><input id="exEnd" inputmode="numeric" maxlength="8" placeholder="5555" autocomplete="off" /></label>
+      </div>
+      <details><summary id="exMore"></summary>
+        <label><span id="exMidL"></span><input id="exMid" inputmode="numeric" maxlength="8" autocomplete="off" /></label>
+        <label><span id="exPatL"></span><input id="exPat" maxlength="14" placeholder="0176X-XX5555" autocomplete="off" /></label>
+      </details>
+      <div class="ex-tpl" id="exTpl" aria-live="polite"></div>
+      <p class="ex-info" id="exInfo" aria-live="polite"></p>
+      <div class="ex-acts">
+        <button class="btn primary" id="exGo" type="button"></button>
+        <button class="btn ghost hidden" id="exPause" type="button"></button>
+        <button class="btn ghost hidden" id="exStop" type="button"></button>
+      </div>
+      <div class="ex-bar hidden" id="exBarBox"><div id="exBar"></div></div>
+      <p class="hint" id="exProg" aria-live="polite"></p>
+    </section>
     <div class="lbl" data-t="selCat">কোন ধরনের নাম্বার?</div>
     <div class="cats" id="cats" role="radiogroup"></div>
     <p class="hint" id="catHint"></p>
@@ -158,8 +179,8 @@
       <h3 data-t="sortTitle">↕️ সাজানো</h3>
       <div class="tool-row">
         <select id="sortSel" aria-label="sort">
+          <option value="new" data-t="sortNew" selected>নতুন আগে</option>
           <option value="score" data-t="sortBest">সেরা আগে</option>
-          <option value="new" data-t="sortNew">নতুন আগে</option>
           <option value="num" data-t="sortNum">নাম্বার অনুযায়ী</option>
         </select>
         <input id="searchBox" data-tp="filterPh" placeholder="ফলাফলে খুঁজুন…" inputmode="numeric" autocomplete="off" />
@@ -206,8 +227,9 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="vip.js?v=4"></script>
-<script src="i18n.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="vip.js?v=5"></script>
+<script src="i18n.js?v=5"></script>
+<script src="app.js?v=5"></script>
+<script src="exact.js?v=5"></script>
 </body>
 </html>
